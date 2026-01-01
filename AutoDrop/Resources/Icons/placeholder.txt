@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Placeholder icon - replace with actual icon file -->
+<!-- For now, create an empty placeholder that can be replaced later -->
