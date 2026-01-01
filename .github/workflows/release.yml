@@ -1,0 +1,136 @@
+# AutoDrop Release Pipeline
+# Triggers when a version tag is pushed (e.g., v1.0.0)
+# Creates GitHub Release with downloadable installer
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Matches v1.0.0, v2.1.3, etc.
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  PROJECT_PATH: 'AutoDrop/AutoDrop.csproj'
+  BUILD_CONFIGURATION: 'Release'
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: windows-latest
+    permissions:
+      contents: write  # Required for creating releases
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: version
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = $tag -replace '^v', ''
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+          echo "TAG=$tag" >> $env:GITHUB_OUTPUT
+        shell: pwsh
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.PROJECT_PATH }}
+
+      # Build for Windows x64
+      - name: Publish Windows x64
+        run: |
+          dotnet publish ${{ env.PROJECT_PATH }} `
+            --configuration ${{ env.BUILD_CONFIGURATION }} `
+            --runtime win-x64 `
+            --self-contained true `
+            --output ./publish/win-x64 `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:Version=${{ steps.version.outputs.VERSION }}
+        shell: pwsh
+
+      # Build for Windows x86 (32-bit)
+      - name: Publish Windows x86
+        run: |
+          dotnet publish ${{ env.PROJECT_PATH }} `
+            --configuration ${{ env.BUILD_CONFIGURATION }} `
+            --runtime win-x86 `
+            --self-contained true `
+            --output ./publish/win-x86 `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:Version=${{ steps.version.outputs.VERSION }}
+        shell: pwsh
+
+      # Build for Windows ARM64
+      - name: Publish Windows ARM64
+        run: |
+          dotnet publish ${{ env.PROJECT_PATH }} `
+            --configuration ${{ env.BUILD_CONFIGURATION }} `
+            --runtime win-arm64 `
+            --self-contained true `
+            --output ./publish/win-arm64 `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:Version=${{ steps.version.outputs.VERSION }}
+        shell: pwsh
+
+      # Create ZIP archives
+      - name: Create release archives
+        run: |
+          Compress-Archive -Path ./publish/win-x64/* -DestinationPath ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x64.zip
+          Compress-Archive -Path ./publish/win-x86/* -DestinationPath ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x86.zip
+          Compress-Archive -Path ./publish/win-arm64/* -DestinationPath ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-arm64.zip
+        shell: pwsh
+
+      # Generate changelog from commits
+      - name: Generate changelog
+        id: changelog
+        run: |
+          $changelog = git log --pretty=format:"- %s (%h)" $(git describe --tags --abbrev=0 HEAD^)..HEAD 2>$null
+          if (-not $changelog) { $changelog = "- Initial release" }
+          $changelog | Out-File -FilePath CHANGELOG.md -Encoding utf8
+          echo "Generated changelog"
+        shell: pwsh
+        continue-on-error: true
+
+      # Create GitHub Release
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: AutoDrop ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## AutoDrop ${{ steps.version.outputs.VERSION }}
+            
+            ### Downloads
+            - **Windows x64** (64-bit): `AutoDrop-${{ steps.version.outputs.VERSION }}-win-x64.zip`
+            - **Windows x86** (32-bit): `AutoDrop-${{ steps.version.outputs.VERSION }}-win-x86.zip`
+            - **Windows ARM64**: `AutoDrop-${{ steps.version.outputs.VERSION }}-win-arm64.zip`
+            
+            ### Installation
+            1. Download the appropriate ZIP for your system
+            2. Extract to any folder
+            3. Run `AutoDrop.exe`
+            
+            ### What's New
+            See commits since last release for changes.
+          files: |
+            ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x64.zip
+            ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x86.zip
+            ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-arm64.zip
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
