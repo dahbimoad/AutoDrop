@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  AutoDrop MSI Installer
+  Built with WiX Toolset v5 (FREE & Open Source)
+  
+  Features:
+  - Installs to %LocalAppData%\AutoDrop (no admin required)
+  - Creates Desktop shortcut
+  - Creates Start Menu shortcut
+  - Adds to Windows Startup
+  - Proper uninstaller
+-->
+
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  
+  <Package 
+    Name="AutoDrop" 
+    Manufacturer="AutoDrop"
+    Version="$(var.Version)"
+    UpgradeCode="8F2C7B1E-4D3A-4E5F-9B8C-1A2D3E4F5678"
+    Scope="perUser"
+    Compressed="yes">
+    
+    <SummaryInformation 
+      Description="AutoDrop - Smart File Organizer"
+      Manufacturer="AutoDrop" />
+
+    <!-- Allow upgrades, prevent downgrades -->
+    <MajorUpgrade 
+      DowngradeErrorMessage="A newer version of AutoDrop is already installed."
+      AllowSameVersionUpgrades="yes" />
+
+    <!-- Embed files in MSI -->
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <!-- Set icon in Add/Remove Programs -->
+    <Icon Id="AutoDropIcon" SourceFile="$(var.PublishDir)\AutoDrop.exe" />
+    <Property Id="ARPPRODUCTICON" Value="AutoDropIcon" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/dahbimoad/AutoDrop" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/dahbimoad/AutoDrop" />
+
+    <!-- Installation Directory: %LocalAppData%\AutoDrop -->
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="INSTALLFOLDER" Name="AutoDrop" />
+    </StandardDirectory>
+
+    <!-- Start Menu Directory -->
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ProgramMenuDir" Name="AutoDrop" />
+    </StandardDirectory>
+
+    <!-- Desktop Directory -->
+    <StandardDirectory Id="DesktopFolder" />
+
+    <!-- Startup Directory -->
+    <StandardDirectory Id="StartupFolder" />
+
+    <!-- Main Application Component -->
+    <ComponentGroup Id="MainApp" Directory="INSTALLFOLDER">
+      <Component Id="AutoDropExe" Guid="*">
+        <File Id="AutoDropExeFile" Source="$(var.PublishDir)\AutoDrop.exe" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <!-- Shortcuts Component -->
+    <ComponentGroup Id="Shortcuts">
+      
+      <!-- Start Menu Shortcut -->
+      <Component Id="StartMenuShortcut" Directory="ProgramMenuDir" Guid="*">
+        <Shortcut Id="StartMenuLink"
+                  Name="AutoDrop"
+                  Description="Smart File Organizer"
+                  Target="[INSTALLFOLDER]AutoDrop.exe"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="AutoDropIcon" />
+        <RemoveFolder Id="RemoveProgramMenuDir" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\AutoDrop" Name="StartMenu" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+
+      <!-- Desktop Shortcut -->
+      <Component Id="DesktopShortcut" Directory="DesktopFolder" Guid="*">
+        <Shortcut Id="DesktopLink"
+                  Name="AutoDrop"
+                  Description="Smart File Organizer"
+                  Target="[INSTALLFOLDER]AutoDrop.exe"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="AutoDropIcon" />
+        <RegistryValue Root="HKCU" Key="Software\AutoDrop" Name="Desktop" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+
+      <!-- Windows Startup Shortcut -->
+      <Component Id="StartupShortcut" Directory="StartupFolder" Guid="*">
+        <Shortcut Id="StartupLink"
+                  Name="AutoDrop"
+                  Description="Smart File Organizer - Auto Start"
+                  Target="[INSTALLFOLDER]AutoDrop.exe"
+                  Arguments="--minimized"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="AutoDropIcon" />
+        <RegistryValue Root="HKCU" Key="Software\AutoDrop" Name="Startup" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+      
+    </ComponentGroup>
+
+    <!-- Feature Definition -->
+    <Feature Id="Complete" Title="AutoDrop" Level="1">
+      <ComponentGroupRef Id="MainApp" />
+      <ComponentGroupRef Id="Shortcuts" />
+    </Feature>
+
+  </Package>
+</Wix>

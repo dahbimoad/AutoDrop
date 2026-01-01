@@ -1,6 +1,6 @@
 # AutoDrop Release Pipeline
 # Triggers when a version tag is pushed (e.g., v1.0.0)
-# Creates GitHub Release with downloadable installer
+# Creates GitHub Release with MSI installer + portable ZIP
 
 name: Release
 
@@ -40,6 +40,10 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # Install WiX Toolset for MSI creation (FREE)
+      - name: Install WiX Toolset
+        run: dotnet tool install --global wix --version 5.0.0
 
       - name: Restore dependencies
         run: dotnet restore ${{ env.PROJECT_PATH }}
@@ -89,9 +93,29 @@ jobs:
       # Create ZIP archives
       - name: Create release archives
         run: |
-          Compress-Archive -Path ./publish/win-x64/* -DestinationPath ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x64.zip
-          Compress-Archive -Path ./publish/win-x86/* -DestinationPath ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x86.zip
-          Compress-Archive -Path ./publish/win-arm64/* -DestinationPath ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-arm64.zip
+          Compress-Archive -Path ./publish/win-x64/* -DestinationPath ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x64-portable.zip
+          Compress-Archive -Path ./publish/win-x86/* -DestinationPath ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x86-portable.zip
+          Compress-Archive -Path ./publish/win-arm64/* -DestinationPath ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-arm64-portable.zip
+        shell: pwsh
+
+      # Build MSI Installer (x64)
+      - name: Build MSI Installer (x64)
+        run: |
+          wix build installer/Product.wxs `
+            -d PublishDir=./publish/win-x64 `
+            -d Version=${{ steps.version.outputs.VERSION }} `
+            -arch x64 `
+            -o ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x64-setup.msi
+        shell: pwsh
+
+      # Build MSI Installer (x86)
+      - name: Build MSI Installer (x86)
+        run: |
+          wix build installer/Product.wxs `
+            -d PublishDir=./publish/win-x86 `
+            -d Version=${{ steps.version.outputs.VERSION }} `
+            -arch x86 `
+            -o ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x86-setup.msi
         shell: pwsh
 
       # Generate changelog from commits
@@ -114,22 +138,33 @@ jobs:
           body: |
             ## AutoDrop ${{ steps.version.outputs.VERSION }}
             
-            ### Downloads
-            - **Windows x64** (64-bit): `AutoDrop-${{ steps.version.outputs.VERSION }}-win-x64.zip`
-            - **Windows x86** (32-bit): `AutoDrop-${{ steps.version.outputs.VERSION }}-win-x86.zip`
-            - **Windows ARM64**: `AutoDrop-${{ steps.version.outputs.VERSION }}-win-arm64.zip`
+            ### 🎯 Recommended Download
+            | Platform | Installer (Recommended) | Portable |
+            |----------|------------------------|----------|
+            | **Windows x64** | `AutoDrop-${{ steps.version.outputs.VERSION }}-win-x64-setup.msi` | `*-portable.zip` |
+            | **Windows x86** | `AutoDrop-${{ steps.version.outputs.VERSION }}-win-x86-setup.msi` | `*-portable.zip` |
+            | **Windows ARM64** | N/A | `*-portable.zip` |
             
-            ### Installation
-            1. Download the appropriate ZIP for your system
-            2. Extract to any folder
-            3. Run `AutoDrop.exe`
+            ### 📦 MSI Installer Features
+            - ✅ Desktop shortcut
+            - ✅ Start menu entry
+            - ✅ Auto-start with Windows
+            - ✅ Proper uninstaller (Add/Remove Programs)
+            - ✅ Auto-updates supported
+            
+            ### 📁 Portable Version
+            - Extract ZIP and run `AutoDrop.exe`
+            - No installation required
+            - Settings stored in same folder
             
             ### What's New
             See commits since last release for changes.
           files: |
-            ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x64.zip
-            ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x86.zip
-            ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-arm64.zip
+            ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x64-setup.msi
+            ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x86-setup.msi
+            ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x64-portable.zip
+            ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x86-portable.zip
+            ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-arm64-portable.zip
           draft: false
           prerelease: ${{ contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
         env:
