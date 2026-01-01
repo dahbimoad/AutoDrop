@@ -30,11 +30,8 @@ public partial class DropZoneWindow : Window
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        // Set up snackbar presenter if needed
-        if (_snackbarService is SnackbarService service)
-        {
-            // Find or create snackbar presenter
-        }
+        // Set up snackbar presenter
+        _snackbarService.SetSnackbarPresenter(SnackbarPresenter);
     }
 
     private void PositionWindow()
