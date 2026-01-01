@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net8.0-windows</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <UseWPF>true</UseWPF>
+        <RootNamespace>AutoDrop</RootNamespace>
+        <AssemblyName>AutoDrop</AssemblyName>
+        <Version>1.0.0</Version>
+        <Authors>AutoDrop Team</Authors>
+        <Description>A Windows desktop application for organizing files using drag-and-drop with smart suggestions.</Description>
+    </PropertyGroup>
+
+    <!-- WPF UI (Fluent Design) -->
+    <ItemGroup>
+        <PackageReference Include="WPF-UI" Version="3.0.5" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+        <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    </ItemGroup>
+
+</Project>
