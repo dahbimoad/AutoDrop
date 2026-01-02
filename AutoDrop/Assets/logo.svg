@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- REFINED DROP v6: Glossy, App Store quality -->
+  <defs>
+    <linearGradient id="dropGrad6" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#67E8F9"/>
+      <stop offset="30%" style="stop-color:#22D3EE"/>
+      <stop offset="60%" style="stop-color:#06B6D4"/>
+      <stop offset="100%" style="stop-color:#0E7490"/>
+    </linearGradient>
+    
+    <linearGradient id="shineGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:0.5"/>
+      <stop offset="100%" style="stop-color:#FFFFFF;stop-opacity:0"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Main drop shape -->
+  <path d="M128 16
+           C128 16 48 108 48 168
+           C48 220 84 244 128 244
+           C172 244 208 220 208 168
+           C208 108 128 16 128 16Z" 
+        fill="url(#dropGrad6)"/>
+  
+  <!-- Glossy top overlay -->
+  <path d="M128 16
+           C128 16 48 108 48 168
+           C48 168 48 100 128 100
+           C208 100 208 168 208 168
+           C208 108 128 16 128 16Z" 
+        fill="url(#shineGrad)" opacity="0.4"/>
+  
+  <!-- Shine spot -->
+  <circle cx="84" cy="100" r="14" fill="#FFFFFF" opacity="0.5"/>
+  <circle cx="84" cy="100" r="8" fill="#FFFFFF" opacity="0.7"/>
+  
+  <!-- Sharp arrow -->
+  <g stroke="#FFFFFF" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <line x1="128" y1="100" x2="128" y2="185"/>
+    <polyline points="96,152 128,185 160,152"/>
+  </g>
+</svg>

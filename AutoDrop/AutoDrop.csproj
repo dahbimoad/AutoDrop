@@ -34,7 +34,15 @@
         
         <!-- Windows Settings -->
         <ApplicationManifest>app.manifest</ApplicationManifest>
+        <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     </PropertyGroup>
+
+    <!-- Assets -->
+    <ItemGroup>
+        <Content Include="Assets\app.ico" />
+        <Content Include="Assets\logo.svg" />
+        <Content Include="Assets\logo.png" />
+    </ItemGroup>
 
     <!-- WPF UI (Fluent Design) -->
     <ItemGroup>

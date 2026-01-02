@@ -5,6 +5,7 @@
   Built with WiX Toolset v5 (FREE & Open Source)
   
   Features:
+  - Professional wizard UI (Next > Next > Install)
   - Installs to %LocalAppData%\AutoDrop (no admin required)
   - Creates Desktop shortcut
   - Creates Start Menu shortcut
@@ -12,7 +13,8 @@
   - Proper uninstaller
 -->
 
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
   
   <Package 
     Name="AutoDrop" 
@@ -108,6 +110,16 @@
       <ComponentGroupRef Id="MainApp" />
       <ComponentGroupRef Id="Shortcuts" />
     </Feature>
+
+    <!-- Wizard UI (Next > Next > Install) -->
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+    
+    <!-- Custom Bitmaps for Installer -->
+    <WixVariable Id="WixUIBannerBmp" Value="$(var.ProjectDir)\AutoDrop\Assets\banner.bmp" />
+    <WixVariable Id="WixUIDialogBmp" Value="$(var.ProjectDir)\AutoDrop\Assets\dialog.bmp" />
+    
+    <!-- License (optional - comment out if no license) -->
+    <!-- <WixVariable Id="WixUILicenseRtf" Value="$(var.ProjectDir)\LICENSE.rtf" /> -->
 
   </Package>
 </Wix>
