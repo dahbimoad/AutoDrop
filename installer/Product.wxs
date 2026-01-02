@@ -18,7 +18,7 @@
   
   <Package 
     Name="AutoDrop" 
-    Manufacturer="AutoDrop"
+    Manufacturer="Moad Dahbi"
     Version="$(var.Version)"
     UpgradeCode="8F2C7B1E-4D3A-4E5F-9B8C-1A2D3E4F5678"
     Scope="perUser"
@@ -26,7 +26,7 @@
     
     <SummaryInformation 
       Description="AutoDrop - Smart File Organizer"
-      Manufacturer="AutoDrop" />
+      Manufacturer="Moad Dahbi" />
 
     <!-- Allow upgrades, prevent downgrades -->
     <MajorUpgrade 
@@ -111,15 +111,12 @@
       <ComponentGroupRef Id="Shortcuts" />
     </Feature>
 
-    <!-- Wizard UI (Next > Next > Install) -->
-    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+    <!-- Wizard UI (Minimal - no license page) -->
+    <ui:WixUI Id="WixUI_Minimal" />
     
     <!-- Custom Bitmaps for Installer -->
     <WixVariable Id="WixUIBannerBmp" Value="$(var.ProjectDir)\AutoDrop\Assets\banner.bmp" />
     <WixVariable Id="WixUIDialogBmp" Value="$(var.ProjectDir)\AutoDrop\Assets\dialog.bmp" />
-    
-    <!-- License (optional - comment out if no license) -->
-    <!-- <WixVariable Id="WixUILicenseRtf" Value="$(var.ProjectDir)\LICENSE.rtf" /> -->
 
   </Package>
 </Wix>
