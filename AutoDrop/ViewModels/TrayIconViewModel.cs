@@ -1,3 +1,4 @@
+using AutoDrop.Views.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Wpf.Ui;
@@ -53,6 +54,16 @@ public partial class TrayIconViewModel : Base.ViewModelBase
         {
             ShowDropZone();
         }
+    }
+
+    /// <summary>
+    /// Opens the Rules Manager window.
+    /// </summary>
+    [RelayCommand]
+    private static void OpenRulesManager()
+    {
+        var rulesWindow = App.GetService<RulesManagerWindow>();
+        rulesWindow.ShowDialog();
     }
 
     /// <summary>

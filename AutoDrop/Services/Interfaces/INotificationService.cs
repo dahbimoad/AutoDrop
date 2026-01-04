@@ -15,11 +15,26 @@ public interface INotificationService
     void ShowMoveSuccess(MoveOperation operation, Action? onUndo = null);
 
     /// <summary>
+    /// Shows a success notification for an auto-move operation.
+    /// </summary>
+    /// <param name="itemName">Name of the moved item.</param>
+    /// <param name="destinationName">Name of the destination folder.</param>
+    /// <param name="onUndo">Callback when user clicks Undo.</param>
+    void ShowAutoMoveSuccess(string itemName, string destinationName, Action? onUndo = null);
+
+    /// <summary>
     /// Shows an error notification.
     /// </summary>
     /// <param name="title">Error title.</param>
     /// <param name="message">Error message.</param>
     void ShowError(string title, string message);
+
+    /// <summary>
+    /// Shows a success notification.
+    /// </summary>
+    /// <param name="title">Notification title.</param>
+    /// <param name="message">Notification message.</param>
+    void ShowSuccess(string title, string message);
 
     /// <summary>
     /// Shows an informational notification.
