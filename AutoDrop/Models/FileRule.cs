@@ -16,6 +16,7 @@ public sealed class FileRule : INotifyPropertyChanged
     private bool _isEnabled = true;
     private DateTime? _lastUsedAt;
     private int _useCount;
+    private bool _isCustomFolder;
 
     /// <summary>
     /// The file extension this rule applies to (e.g., ".jpg", ".pdf").
@@ -88,6 +89,17 @@ public sealed class FileRule : INotifyPropertyChanged
     /// </summary>
     [JsonIgnore]
     public string DestinationName => Path.GetFileName(Destination.TrimEnd(Path.DirectorySeparatorChar));
+
+    /// <summary>
+    /// Whether this rule points to a custom folder created by the app (vs a system/external folder).
+    /// This is set dynamically at runtime, not persisted.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsCustomFolder
+    {
+        get => _isCustomFolder;
+        set => SetProperty(ref _isCustomFolder, value);
+    }
 
     #region INotifyPropertyChanged
 

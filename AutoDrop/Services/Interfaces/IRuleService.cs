@@ -61,4 +61,13 @@ public interface IRuleService
     /// <param name="extension">File extension.</param>
     /// <param name="isEnabled">Whether the rule is enabled.</param>
     Task SetRuleEnabledAsync(string extension, bool isEnabled);
+
+    /// <summary>
+    /// Updates all rules that have a specific destination path to a new path.
+    /// Used when a custom folder's path changes.
+    /// </summary>
+    /// <param name="oldPath">The old destination path.</param>
+    /// <param name="newPath">The new destination path.</param>
+    /// <returns>Number of rules updated.</returns>
+    Task<int> UpdateRulesDestinationAsync(string oldPath, string newPath);
 }

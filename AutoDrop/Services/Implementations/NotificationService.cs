@@ -28,14 +28,14 @@ public sealed class NotificationService : INotificationService
         ArgumentNullException.ThrowIfNull(operation);
 
         var destinationName = Path.GetFileName(Path.GetDirectoryName(operation.DestinationPath) ?? operation.DestinationPath);
-        var message = $"Moved {operation.ItemName} → {destinationName}";
+        var message = $"{operation.ItemName} → {destinationName}";
 
         _logger.LogDebug("Showing move success: {Message}", message);
 
         _snackbarService.Show(
-            "Success",
+            "Moved",
             message,
-            ControlAppearance.Success,
+            ControlAppearance.Secondary,
             new SymbolIcon(SymbolRegular.Checkmark24),
             TimeSpan.FromMilliseconds(AppConstants.ToastDurationMs));
     }
@@ -43,14 +43,14 @@ public sealed class NotificationService : INotificationService
     /// <inheritdoc />
     public void ShowAutoMoveSuccess(string itemName, string destinationName)
     {
-        var message = $"Auto-moved {itemName} → {destinationName}";
+        var message = $"{itemName} → {destinationName}";
 
         _logger.LogDebug("Showing auto-move success: {Message}", message);
 
         _snackbarService.Show(
-            "Auto-Move",
+            "Auto-moved",
             message,
-            ControlAppearance.Success,
+            ControlAppearance.Secondary,
             new SymbolIcon(SymbolRegular.ArrowForward24),
             TimeSpan.FromMilliseconds(AppConstants.ToastDurationMs));
     }
@@ -76,7 +76,7 @@ public sealed class NotificationService : INotificationService
         _snackbarService.Show(
             title,
             message,
-            ControlAppearance.Success,
+            ControlAppearance.Secondary,
             new SymbolIcon(SymbolRegular.Checkmark24),
             TimeSpan.FromMilliseconds(AppConstants.ToastDurationMs));
     }
@@ -89,7 +89,7 @@ public sealed class NotificationService : INotificationService
         _snackbarService.Show(
             title,
             message,
-            ControlAppearance.Info,
+            ControlAppearance.Secondary,
             new SymbolIcon(SymbolRegular.Info24),
             TimeSpan.FromMilliseconds(AppConstants.ToastDurationMs));
     }
@@ -101,8 +101,8 @@ public sealed class NotificationService : INotificationService
         
         _snackbarService.Show(
             "Restored",
-            $"{itemName} has been moved back to its original location.",
-            ControlAppearance.Caution,
+            $"{itemName} moved back.",
+            ControlAppearance.Secondary,
             new SymbolIcon(SymbolRegular.ArrowUndo24),
             TimeSpan.FromMilliseconds(AppConstants.ToastDurationMs));
     }

@@ -7,6 +7,8 @@
     <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
     <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
     <converters:InverseCountToVisibilityConverter x:Key="InverseCountToVisibilityConverter"/>
+    <converters:PathParentConverter x:Key="PathParentConverter"/>
+    <converters:PathFolderNameConverter x:Key="PathFolderNameConverter"/>
 
     <!-- Drop Zone Styles -->
     <Style x:Key="DropZoneBorderStyle" TargetType="Border">

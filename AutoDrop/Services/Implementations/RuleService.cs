@@ -219,6 +219,69 @@ public sealed class RuleService : IRuleService
         }
     }
 
+    /// <inheritdoc />
+    public async Task<int> UpdateRulesDestinationAsync(string oldPath, string newPath)
+    {
+        if (string.IsNullOrWhiteSpace(oldPath))
+            throw new ArgumentException("Old path cannot be empty.", nameof(oldPath));
+        if (string.IsNullOrWhiteSpace(newPath))
+            throw new ArgumentException("New path cannot be empty.", nameof(newPath));
+
+        // Normalize paths for comparison
+        var normalizedOldPath = Path.GetFullPath(oldPath).TrimEnd(Path.DirectorySeparatorChar);
+        var normalizedNewPath = Path.GetFullPath(newPath).TrimEnd(Path.DirectorySeparatorChar);
+
+        _logger.LogInformation("Updating rules destination from '{OldPath}' to '{NewPath}'", normalizedOldPath, normalizedNewPath);
+
+        await _lock.WaitAsync();
+        try
+        {
+            var config = await GetConfigurationAsync();
+            var updatedCount = 0;
+
+            foreach (var rule in config.Rules)
+            {
+                var normalizedDest = Path.GetFullPath(rule.Destination).TrimEnd(Path.DirectorySeparatorChar);
+                
+                // Check for exact match OR if rule destination starts with old path (handles subfolders)
+                if (string.Equals(normalizedDest, normalizedOldPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    // Exact match - replace entirely
+                    _logger.LogDebug("Updating rule {Extension}: {OldDest} -> {NewDest}", 
+                        rule.Extension, rule.Destination, normalizedNewPath);
+                    rule.Destination = normalizedNewPath;
+                    updatedCount++;
+                }
+                else if (normalizedDest.StartsWith(normalizedOldPath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                {
+                    // Rule destination is inside the old folder - update the base path
+                    var relativePart = normalizedDest.Substring(normalizedOldPath.Length);
+                    var newDestination = normalizedNewPath + relativePart;
+                    _logger.LogDebug("Updating rule {Extension}: {OldDest} -> {NewDest} (subfolder)", 
+                        rule.Extension, rule.Destination, newDestination);
+                    rule.Destination = newDestination;
+                    updatedCount++;
+                }
+            }
+
+            if (updatedCount > 0)
+            {
+                await SaveConfigurationAsync(config);
+                _logger.LogInformation("Updated {Count} rules to new destination path", updatedCount);
+            }
+            else
+            {
+                _logger.LogDebug("No rules found matching old path '{OldPath}'", normalizedOldPath);
+            }
+
+            return updatedCount;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
     private async Task<RulesConfiguration> GetConfigurationAsync()
     {
         if (_cachedConfiguration != null)

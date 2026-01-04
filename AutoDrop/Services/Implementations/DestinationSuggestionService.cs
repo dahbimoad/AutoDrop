@@ -135,6 +135,8 @@ public sealed class DestinationSuggestionService : IDestinationSuggestionService
                 if (suggestions.Count >= AppConstants.MaxSuggestions)
                     break;
 
+                _logger.LogDebug("Adding custom folder suggestion: {Name} -> {Path}", folder.Name, folder.Path);
+                
                 suggestions.Add(new DestinationSuggestion
                 {
                     DisplayName = folder.Name,
