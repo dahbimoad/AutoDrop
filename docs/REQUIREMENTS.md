@@ -1,6 +1,6 @@
 # AutoDrop — Requirements Document
-**Version:** 1.0 MVP  
-**Date:** January 1, 2026  
+**Version:** 1.0 MVP (Pre-Released)  
+**Date:** January 4, 2026  
 **Author:** Product Team
 
 ---
@@ -54,11 +54,11 @@ Users waste time organizing files:
 As a user, I want a small floating window that stays on top of other apps so I can drag files anytime.
 
 **Acceptance Criteria:**
-- [ ] Window is always-on-top (`Topmost = true`)
-- [ ] Window is small (~150x150 pixels)
-- [ ] Window can be dragged to any screen position
-- [ ] Window has minimal UI: icon + "Drop files here" text
-- [ ] Window shows visual feedback (color change) when file hovers over it
+- [x] Window is always-on-top (`Topmost = true`)
+- [x] Window is small (~150x150 pixels)
+- [x] Window can be dragged to any screen position
+- [x] Window has minimal UI: icon + "Drop files here" text
+- [x] Window shows visual feedback (color change) when file hovers over it
 
 ---
 
@@ -68,11 +68,11 @@ As a user, I want a small floating window that stays on top of other apps so I c
 As a user, I want to drag and drop files or folders onto the drop zone.
 
 **Acceptance Criteria:**
-- [ ] Accepts single file
-- [ ] Accepts multiple files (batch)
-- [ ] Accepts single folder
-- [ ] Accepts multiple folders
-- [ ] Shows file count when multiple items dropped
+- [x] Accepts single file
+- [x] Accepts multiple files (batch)
+- [x] Accepts single folder
+- [x] Accepts multiple folders
+- [x] Shows file count when multiple items dropped
 
 ---
 
@@ -82,9 +82,9 @@ As a user, I want to drag and drop files or folders onto the drop zone.
 As a user, after dropping a file, I want to see 3-4 suggested destination folders based on file type.
 
 **Acceptance Criteria:**
-- [ ] Popup appears near drop zone after drop
-- [ ] Shows file name and detected type (e.g., "Image", "Document")
-- [ ] Shows 3-4 destination buttons based on extension mapping:
+- [x] Popup appears near drop zone after drop
+- [x] Shows file name and detected type (e.g., "Image", "Document")
+- [x] Shows 3-4 destination buttons based on extension mapping:
 
 | Extension | Category | Default Destination |
 |-----------|----------|---------------------|
@@ -96,9 +96,9 @@ As a user, after dropping a file, I want to see 3-4 suggested destination folder
 | .exe .msi | Installer | Downloads |
 | Other | Unknown | Desktop |
 
-- [ ] Best match is visually highlighted
-- [ ] "Browse other folder..." option available
-- [ ] Popup has X button to cancel
+- [x] Best match is visually highlighted
+- [x] "Browse other folder..." option available
+- [x] Popup has X button to cancel
 
 ---
 
@@ -108,11 +108,11 @@ As a user, after dropping a file, I want to see 3-4 suggested destination folder
 As a user, when I click a destination button, the file should move immediately.
 
 **Acceptance Criteria:**
-- [ ] File/folder moves to selected destination
-- [ ] Original file is removed from source
-- [ ] If file exists at destination → auto-rename to `filename (1).ext`
-- [ ] If move fails (permissions, file locked) → show error message
-- [ ] Popup closes after successful move
+- [x] File/folder moves to selected destination
+- [x] Original file is removed from source
+- [x] If file exists at destination → auto-rename to `filename (1).ext`
+- [x] If move fails (permissions, file locked) → show error message
+- [x] Popup closes after successful move
 
 ---
 
@@ -122,12 +122,12 @@ As a user, when I click a destination button, the file should move immediately.
 As a user, after a move, I want a notification with an Undo button so I can recover from mistakes.
 
 **Acceptance Criteria:**
-- [ ] Toast notification appears (bottom-right corner)
-- [ ] Shows: "✓ Moved filename.ext → Pictures"
-- [ ] Has [Undo] button
-- [ ] Clicking Undo moves file back to original location
-- [ ] Notification auto-dismisses after 5 seconds
-- [ ] Only last operation can be undone
+- [x] Toast notification appears (bottom-right corner)
+- [x] Shows: "✓ Moved filename.ext → Pictures"
+- [x] Has [Undo] button
+- [x] Clicking Undo moves file back to original location
+- [x] Notification auto-dismisses after 5 seconds
+- [x] Only last operation can be undone
 
 ---
 
@@ -137,11 +137,11 @@ As a user, after a move, I want a notification with an Undo button so I can reco
 As a user, I want to check "Always do this for .jpg files" so the app learns my preference.
 
 **Acceptance Criteria:**
-- [ ] Checkbox in suggestion popup: "Always move .{ext} files here"
-- [ ] When checked + move confirmed → rule saved to local JSON file
-- [ ] Next time same extension dropped → auto-move without popup
-- [ ] Auto-move shows toast notification (not popup)
-- [ ] Rules stored in: `%AppData%/AutoDrop/rules.json`
+- [x] Checkbox in suggestion popup: "Always move .{ext} files here"
+- [x] When checked + move confirmed → rule saved to local JSON file
+- [x] Next time same extension dropped → auto-move without popup
+- [x] Auto-move shows toast notification (not popup)
+- [x] Rules stored in: `%AppData%/AutoDrop/rules.json`
 
 **Rule Format:**
 ```json
@@ -161,10 +161,10 @@ As a user, I want to check "Always do this for .jpg files" so the app learns my 
 As a user, I want the app to minimize to system tray so it's always available but not intrusive.
 
 **Acceptance Criteria:**
-- [ ] Minimize button sends app to system tray (not taskbar)
-- [ ] Tray icon visible in notification area
-- [ ] Double-click tray icon → restore drop zone
-- [ ] Right-click tray icon shows menu:
+- [x] Minimize button sends app to system tray (not taskbar)
+- [x] Tray icon visible in notification area
+- [x] Double-click tray icon → restore drop zone
+- [x] Right-click tray icon shows menu:
   - Show Drop Zone
   - Settings (disabled for MVP)
   - Exit
@@ -180,8 +180,11 @@ As a user, I want the app to minimize to system tray so it's always available bu
 | UI Library | **WPF UI** (Fluent Design - Windows 11 style) |
 | Package | `WPF-UI` via NuGet |
 | Architecture | MVVM (Model-View-ViewModel) |
+| MVVM Toolkit | CommunityToolkit.Mvvm |
 | Storage | JSON files (rules, config) |
+| Logging | Serilog (file sink with rolling logs) |
 | Notifications | WPF UI Snackbar + Windows Toast |
+| Installer | WiX Toolset v5 (MSI) |
 
 **Why WPF UI?**
 - ✅ Modern Windows 11 Fluent Design (Mica, Acrylic effects)
@@ -194,26 +197,21 @@ As a user, I want the app to minimize to system tray so it's always available bu
 **Project Architecture:**
 ```
 AutoDrop/
-├── src/
-│   └── AutoDrop/          # Main WPF Project
-│       ├── Models/                  # Data models (POCOs)
-│       ├── ViewModels/              # MVVM view logic + state
-│       │   └── Base/                # Base classes (ViewModelBase, RelayCommand)
-│       ├── Views/                   # XAML UI
-│       │   ├── Windows/             # Main windows
-│       │   ├── Dialogs/             # Popup dialogs
-│       │   └── Controls/            # Reusable controls
-│       ├── Services/                # Business logic layer
-│       │   ├── Interfaces/          # Service contracts
-│       │   └── Implementations/     # Service implementations
-│       ├── Core/                    # Infrastructure (DI, Config)
-│       ├── Helpers/                 # Utility classes
-│       ├── Converters/              # XAML converters
-│       └── Resources/               # Styles, icons, themes
-├── tests/
-│   ├── AutoDrop.Tests/
-│   └── AutoDrop.IntegrationTests/
-└── docs/
+├── AutoDrop/              # Main WPF Project
+│   ├── Models/                  # Data models (POCOs)
+│   ├── ViewModels/              # MVVM view logic + state
+│   │   └── Base/                # Base classes (ViewModelBase)
+│   ├── Views/                   # XAML UI
+│   │   └── Windows/             # Main windows
+│   ├── Services/                # Business logic layer
+│   │   ├── Interfaces/          # Service contracts
+│   │   └── Implementations/     # Service implementations
+│   ├── Core/                    # Infrastructure (DI, Constants)
+│   ├── Converters/              # XAML converters
+│   └── Resources/               # Styles, icons, themes
+├── docs/                        # Documentation
+├── installer/                   # WiX installer files
+└── scripts/                     # Build scripts
 ```
 
 **Key Principles:**
@@ -223,6 +221,39 @@ AutoDrop/
 - ViewModels never call Views, Views never call Services directly
 
 ---
+
+## 6.1 Production Hardening 
+
+The following technical improvements were implemented to ensure production readiness:
+
+### Code Quality & Resource Management
+- [x] **IDisposable implementation** on all services with cleanup logic
+- [x] **ConfigureAwait(false)** on all async calls in services
+- [x] **Event handler cleanup** to prevent memory leaks
+- [x] **Try-catch in async void** event handlers with proper error logging
+- [x] **Exception handling** in `DroppedItem.FromPath()` for robust file info retrieval
+
+### Async & Cancellation Support
+- [x] **CancellationToken** added to all async interfaces and implementations
+- [x] Proper cancellation propagation through service layers
+- [x] Graceful operation cancellation support
+
+### Architecture Improvements
+- [x] **IWindowService** extracted for window management (testability)
+- [x] **Input validation** on all model setters with `ArgumentException`
+- [x] **Import file size limit** (10MB max) for rule configuration files
+
+### Logging & Diagnostics
+- [x] **Serilog file logging** with rolling daily logs
+- [x] Logs stored at `%AppData%\AutoDrop\Logs\autodrop-YYYYMMDD.log`
+- [x] 7-day log retention policy
+- [x] Debug level logging in DEBUG builds, Info level in Release
+
+### Installer & Distribution
+- [x] **WiX Toolset v5** MSI installer
+- [x] Per-user installation to `%LocalAppData%\AutoDrop` (no admin required)
+- [x] Self-contained single-file deployment (~137MB MSI)
+- [x] Local build script (`scripts/build-local.ps1`)
 
 ---
 
@@ -636,8 +667,10 @@ As an end user, I want a professional installer that makes setup easy and instal
 - [x] US-05: Undo via Notification
 - [x] US-06: Remember My Choice
 - [x] US-07: System Tray
+- [x] Production hardening (logging, error handling, resource cleanup)
+- [x] MSI installer with WiX Toolset v5
 
-**Status:** ✅ Complete
+**Status:** ✅ Complete - MVP Pre-Released January 4, 2026
 
 ---
 
@@ -928,6 +961,6 @@ File exists?
 
 ---
 
-**Document Status:** ✅ Ready for Implementation  
-**Last Updated:** January 3, 2026  
+**Document Status:** ✅ MVP Pre-Released  
+**Last Updated:** January 4, 2026  
 **Version Control:** This document is the single source of truth for AutoDrop development.
