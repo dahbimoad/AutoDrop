@@ -275,6 +275,40 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
     }
 
     /// <summary>
+    /// Saves the AutoMove property for a rule (called from code-behind).
+    /// </summary>
+    public async Task SaveRuleAutoMoveAsync(FileRule rule)
+    {
+        try
+        {
+            _logger.LogDebug("Saving AutoMove for {Extension}: {Value}", rule.Extension, rule.AutoMove);
+            await _ruleService.SetAutoMoveAsync(rule.Extension, rule.AutoMove);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to save AutoMove for {Extension}", rule.Extension);
+            _notificationService.ShowError("Error", ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Saves the IsEnabled property for a rule (called from code-behind).
+    /// </summary>
+    public async Task SaveRuleEnabledAsync(FileRule rule)
+    {
+        try
+        {
+            _logger.LogDebug("Saving IsEnabled for {Extension}: {Value}", rule.Extension, rule.IsEnabled);
+            await _ruleService.SetRuleEnabledAsync(rule.Extension, rule.IsEnabled);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to save IsEnabled for {Extension}", rule.Extension);
+            _notificationService.ShowError("Error", ex.Message);
+        }
+    }
+
+    /// <summary>
     /// Toggles enabled state for the selected rule.
     /// </summary>
     [RelayCommand]
@@ -494,16 +528,36 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
     }
 
     /// <summary>
-    /// Edits a custom folder.
+    /// Saves the IsPinned property for a folder (called from code-behind).
+    /// </summary>
+    public async Task SaveFolderPinnedAsync(CustomFolder folder)
+    {
+        try
+        {
+            _logger.LogDebug("Saving IsPinned for {Name}: {Value}", folder.Name, folder.IsPinned);
+            await _settingsService.UpdateCustomFolderAsync(folder);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to save IsPinned for {Name}", folder.Name);
+            _notificationService.ShowError("Error", ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Changes the path for a custom folder using folder browser.
     /// </summary>
     [RelayCommand]
-    private async Task EditFolderPathAsync(CustomFolder? folder)
+    private async Task ChangeFolderPathAsync(CustomFolder? folder)
     {
         if (folder == null) return;
 
         var newPath = ShowFolderBrowserDialog(folder.Path);
         if (string.IsNullOrEmpty(newPath) || newPath == folder.Path)
             return;
+
+        _logger.LogInformation("Changing folder path: {Name} from {OldPath} to {NewPath}", 
+            folder.Name, folder.Path, newPath);
 
         IsBusy = true;
         try
@@ -514,6 +568,7 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to change folder path for {Name}", folder.Name);
             _notificationService.ShowError("Error", ex.Message);
         }
         finally

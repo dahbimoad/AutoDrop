@@ -1,4 +1,6 @@
 using System.Windows;
+using System.Windows.Controls;
+using AutoDrop.Models;
 using AutoDrop.ViewModels;
 using Wpf.Ui.Controls;
 
@@ -24,5 +26,38 @@ public partial class RulesManagerWindow : FluentWindow
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         await _viewModel.LoadDataAsync();
+    }
+
+    /// <summary>
+    /// Handle rule AutoMove checkbox changes - saves to persistence immediately.
+    /// </summary>
+    private async void OnRuleAutoMoveChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.CheckBox { DataContext: FileRule rule })
+        {
+            await _viewModel.SaveRuleAutoMoveAsync(rule);
+        }
+    }
+
+    /// <summary>
+    /// Handle rule Enabled checkbox changes - saves to persistence immediately.
+    /// </summary>
+    private async void OnRuleEnabledChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.CheckBox { DataContext: FileRule rule })
+        {
+            await _viewModel.SaveRuleEnabledAsync(rule);
+        }
+    }
+
+    /// <summary>
+    /// Handle folder Pinned checkbox changes - saves to persistence immediately.
+    /// </summary>
+    private async void OnFolderPinnedChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.CheckBox { DataContext: CustomFolder folder })
+        {
+            await _viewModel.SaveFolderPinnedAsync(folder);
+        }
     }
 }

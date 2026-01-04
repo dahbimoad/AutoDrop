@@ -146,11 +146,11 @@
                                     <DataGridTemplateColumn Header="Auto" Width="60">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
-                                                <CheckBox IsChecked="{Binding AutoMove, Mode=OneWay}"
-                                                          Command="{Binding DataContext.ToggleAutoMoveCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                          CommandParameter="{Binding}"
+                                                <CheckBox IsChecked="{Binding AutoMove, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                           HorizontalAlignment="Center"
-                                                          ToolTip="Enable auto-move without popup"/>
+                                                          ToolTip="Enable auto-move without popup"
+                                                          Checked="OnRuleAutoMoveChanged"
+                                                          Unchecked="OnRuleAutoMoveChanged"/>
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
                                     </DataGridTemplateColumn>
@@ -159,11 +159,11 @@
                                     <DataGridTemplateColumn Header="Enabled" Width="70">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
-                                                <CheckBox IsChecked="{Binding IsEnabled, Mode=OneWay}"
-                                                          Command="{Binding DataContext.ToggleRuleEnabledCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                          CommandParameter="{Binding}"
+                                                <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                           HorizontalAlignment="Center"
-                                                          ToolTip="Enable or disable this rule"/>
+                                                          ToolTip="Enable or disable this rule"
+                                                          Checked="OnRuleEnabledChanged"
+                                                          Unchecked="OnRuleEnabledChanged"/>
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
                                     </DataGridTemplateColumn>
@@ -366,9 +366,9 @@
                                                                Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                                                Margin="0,0,16,0"/>
                                                     <CheckBox Content="Pinned"
-                                                              IsChecked="{Binding IsPinned, Mode=OneWay}"
-                                                              Command="{Binding DataContext.ToggleFolderPinnedCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                              CommandParameter="{Binding}"
+                                                              IsChecked="{Binding IsPinned, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                              Checked="OnFolderPinnedChanged"
+                                                              Unchecked="OnFolderPinnedChanged"
                                                               FontSize="11"/>
                                                 </StackPanel>
 
@@ -378,7 +378,7 @@
                                                                Appearance="Transparent"
                                                                Padding="6"
                                                                ToolTip="Change path"
-                                                               Command="{Binding DataContext.EditFolderPathCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                               Command="{Binding DataContext.ChangeFolderPathCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                                CommandParameter="{Binding}"/>
                                                     <ui:Button Icon="{ui:SymbolIcon Delete24}"
                                                                Appearance="Transparent"
