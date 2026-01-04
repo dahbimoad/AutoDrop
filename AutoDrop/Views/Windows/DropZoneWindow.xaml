@@ -17,7 +17,7 @@
         WindowStyle="None"
         AllowsTransparency="True"
         ResizeMode="NoResize"
-        ShowInTaskbar="False"
+        ShowInTaskbar="True"
         WindowStartupLocation="Manual"
         Background="Transparent"
         d:DataContext="{d:DesignInstance viewmodels:DropZoneViewModel, IsDesignTimeCreatable=False}">
