@@ -60,9 +60,6 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
     private bool _newFolderPinned;
 
     [ObservableProperty]
-    private string _newFolderIcon = "📁";
-
-    [ObservableProperty]
     private bool _createNewFolder = true; // If true, creates subfolder. If false, links existing folder.
 
     #endregion
@@ -72,15 +69,6 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
     public ObservableCollection<FileRule> Rules { get; } = [];
     public ObservableCollection<CustomFolder> CustomFolders { get; } = [];
     public ICollectionView FilteredRules { get; }
-
-    /// <summary>
-    /// Available icons for custom folders.
-    /// </summary>
-    public IReadOnlyList<string> AvailableIcons { get; } = new[]
-    {
-        "📁", "📂", "💼", "🏠", "🎵", "🎬", "📷", "📄", "📦", "🎮", 
-        "💾", "📊", "📈", "🔧", "⚙️", "🚀", "💡", "📚", "🎨", "✉️"
-    };
 
     #endregion
 
@@ -480,7 +468,7 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
             var folder = await _settingsService.AddCustomFolderAsync(
                 NewFolderName, 
                 normalizedPath, 
-                NewFolderIcon, 
+                "📁", // Default folder icon
                 NewFolderPinned,
                 CreateNewFolder); // createSubfolder parameter
             
@@ -665,7 +653,6 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
     {
         NewFolderName = string.Empty;
         NewFolderPath = string.Empty;
-        NewFolderIcon = "📁";
         NewFolderPinned = false;
         CreateNewFolder = true;
     }

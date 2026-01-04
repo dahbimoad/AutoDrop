@@ -479,34 +479,19 @@
 
                             <Grid Grid.Row="0" Margin="0,0,0,12">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="2*"/>
                                 </Grid.ColumnDefinitions>
 
-                                <!-- Icon Selector -->
-                                <ComboBox Grid.Column="0"
-                                          ItemsSource="{Binding AvailableIcons}"
-                                          SelectedItem="{Binding NewFolderIcon}"
-                                          Width="70"
-                                          Margin="0,0,8,0"
-                                          VerticalAlignment="Bottom">
-                                    <ComboBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding}" FontSize="18" HorizontalAlignment="Center"/>
-                                        </DataTemplate>
-                                    </ComboBox.ItemTemplate>
-                                </ComboBox>
-
                                 <!-- Name -->
-                                <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                                <StackPanel Grid.Column="0" Margin="0,0,8,0">
                                     <TextBlock Text="Folder Name" FontSize="12" Margin="0,0,0,4"/>
                                     <ui:TextBox PlaceholderText="e.g., Work Projects"
                                                 Text="{Binding NewFolderName, UpdateSourceTrigger=PropertyChanged}"/>
                                 </StackPanel>
 
                                 <!-- Parent Path -->
-                                <StackPanel Grid.Column="2">
+                                <StackPanel Grid.Column="1">
                                     <TextBlock Text="Create In (Parent Folder)" FontSize="12" Margin="0,0,0,4"/>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
