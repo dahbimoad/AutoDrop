@@ -12,15 +12,17 @@ public interface IFileOperationService
     /// </summary>
     /// <param name="sourcePath">Source file or folder path.</param>
     /// <param name="destinationFolder">Destination folder path.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The completed move operation details.</returns>
-    Task<MoveOperation> MoveAsync(string sourcePath, string destinationFolder);
+    Task<MoveOperation> MoveAsync(string sourcePath, string destinationFolder, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Undoes a previous move operation.
     /// </summary>
     /// <param name="operation">The operation to undo.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if undo was successful.</returns>
-    Task<bool> UndoMoveAsync(MoveOperation operation);
+    Task<bool> UndoMoveAsync(MoveOperation operation, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Checks if a file or folder exists.

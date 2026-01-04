@@ -42,7 +42,7 @@ public sealed class DestinationSuggestionService : IDestinationSuggestionService
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<DestinationSuggestion>> GetSuggestionsAsync(DroppedItem item)
+    public async Task<IReadOnlyList<DestinationSuggestion>> GetSuggestionsAsync(DroppedItem item, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(item);
         _logger.LogDebug("Getting suggestions for: {ItemName} (Category: {Category}, Extension: {Extension})", 
@@ -51,12 +51,12 @@ public sealed class DestinationSuggestionService : IDestinationSuggestionService
         var suggestions = new List<DestinationSuggestion>();
 
         // 1. Add pinned custom folders at top priority
-        await AddCustomFolderSuggestionsAsync(suggestions);
+        await AddCustomFolderSuggestionsAsync(suggestions, cancellationToken).ConfigureAwait(false);
 
         // 2. Check for user-defined rule
         if (!item.IsDirectory && !string.IsNullOrEmpty(item.Extension))
         {
-            var rule = await _ruleService.GetRuleForExtensionAsync(item.Extension);
+            var rule = await _ruleService.GetRuleForExtensionAsync(item.Extension, cancellationToken).ConfigureAwait(false);
             if (rule != null && Directory.Exists(rule.Destination))
             {
                 _logger.LogDebug("Found rule for {Extension}: {Destination}", item.Extension, rule.Destination);
@@ -119,11 +119,11 @@ public sealed class DestinationSuggestionService : IDestinationSuggestionService
     /// Adds custom folders from settings as suggestions.
     /// Pinned folders appear first with high priority.
     /// </summary>
-    private async Task AddCustomFolderSuggestionsAsync(List<DestinationSuggestion> suggestions)
+    private async Task AddCustomFolderSuggestionsAsync(List<DestinationSuggestion> suggestions, CancellationToken cancellationToken = default)
     {
         try
         {
-            var settings = await _settingsService.GetSettingsAsync();
+            var settings = await _settingsService.GetSettingsAsync(cancellationToken).ConfigureAwait(false);
             var customFolders = settings.CustomFolders
                 .Where(f => Directory.Exists(f.Path))
                 .OrderByDescending(f => f.IsPinned)

@@ -18,11 +18,12 @@ public sealed class FileOperationService : IFileOperationService
     }
 
     /// <inheritdoc />
-    public async Task<MoveOperation> MoveAsync(string sourcePath, string destinationFolder)
+    public async Task<MoveOperation> MoveAsync(string sourcePath, string destinationFolder, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationFolder);
 
+        cancellationToken.ThrowIfCancellationRequested();
         _logger.LogInformation("Moving: {Source} -> {Destination}", sourcePath, destinationFolder);
 
         if (!Exists(sourcePath))
@@ -46,6 +47,7 @@ public sealed class FileOperationService : IFileOperationService
 
         await Task.Run(() =>
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (isDirectory)
             {
                 Directory.Move(sourcePath, destinationPath);
@@ -54,7 +56,7 @@ public sealed class FileOperationService : IFileOperationService
             {
                 File.Move(sourcePath, destinationPath);
             }
-        });
+        }, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("Move completed: {ItemName} -> {Destination}", itemName, destinationPath);
 
@@ -68,9 +70,11 @@ public sealed class FileOperationService : IFileOperationService
     }
 
     /// <inheritdoc />
-    public async Task<bool> UndoMoveAsync(MoveOperation operation)
+    public async Task<bool> UndoMoveAsync(MoveOperation operation, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(operation);
+        
+        cancellationToken.ThrowIfCancellationRequested();
         _logger.LogInformation("Undoing move: {ItemName}", operation.ItemName);
 
         if (!operation.CanUndo)
@@ -106,6 +110,7 @@ public sealed class FileOperationService : IFileOperationService
 
         await Task.Run(() =>
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (operation.IsDirectory)
             {
                 Directory.Move(operation.DestinationPath, targetPath);
@@ -114,7 +119,7 @@ public sealed class FileOperationService : IFileOperationService
             {
                 File.Move(operation.DestinationPath, targetPath);
             }
-        });
+        }, cancellationToken).ConfigureAwait(false);
 
         operation.CanUndo = false;
         _logger.LogInformation("Undo completed: {ItemName} restored to {Path}", operation.ItemName, targetPath);

@@ -10,6 +10,16 @@ namespace AutoDrop.Models;
 /// </summary>
 public sealed class FileRule : INotifyPropertyChanged
 {
+    /// <summary>
+    /// Maximum allowed length for file extension (including dot).
+    /// </summary>
+    public const int MaxExtensionLength = 32;
+    
+    /// <summary>
+    /// Maximum allowed length for destination path.
+    /// </summary>
+    public const int MaxDestinationLength = 260;
+
     private string _extension = string.Empty;
     private string _destination = string.Empty;
     private bool _autoMove;
@@ -25,7 +35,11 @@ public sealed class FileRule : INotifyPropertyChanged
     public required string Extension
     {
         get => _extension;
-        set => SetProperty(ref _extension, value);
+        set
+        {
+            var validated = ValidateExtension(value);
+            SetProperty(ref _extension, validated);
+        }
     }
 
     /// <summary>
@@ -35,7 +49,11 @@ public sealed class FileRule : INotifyPropertyChanged
     public required string Destination
     {
         get => _destination;
-        set => SetProperty(ref _destination, value);
+        set
+        {
+            var validated = ValidateDestination(value);
+            SetProperty(ref _destination, validated);
+        }
     }
 
     /// <summary>
@@ -56,6 +74,60 @@ public sealed class FileRule : INotifyPropertyChanged
     {
         get => _isEnabled;
         set => SetProperty(ref _isEnabled, value);
+    }
+
+    /// <summary>
+    /// Validates and normalizes a file extension.
+    /// </summary>
+    private static string ValidateExtension(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return string.Empty;
+        
+        var trimmed = value.Trim();
+        
+        // Ensure extension starts with a dot
+        if (!trimmed.StartsWith('.'))
+            trimmed = "." + trimmed;
+        
+        // Check for invalid characters in extension
+        var invalidChars = Path.GetInvalidFileNameChars();
+        foreach (var c in trimmed.Skip(1)) // Skip the leading dot
+        {
+            if (invalidChars.Contains(c))
+                throw new ArgumentException($"Extension contains invalid character: '{c}'", nameof(value));
+        }
+        
+        // Enforce maximum length
+        if (trimmed.Length > MaxExtensionLength)
+            throw new ArgumentException($"Extension exceeds maximum length of {MaxExtensionLength} characters.", nameof(value));
+        
+        return trimmed.ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// Validates a destination path.
+    /// </summary>
+    private static string ValidateDestination(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return string.Empty;
+        
+        var trimmed = value.Trim();
+        
+        // Enforce maximum length (Windows MAX_PATH)
+        if (trimmed.Length > MaxDestinationLength)
+            throw new ArgumentException($"Destination path exceeds maximum length of {MaxDestinationLength} characters.", nameof(value));
+        
+        // Check for invalid path characters
+        var invalidChars = Path.GetInvalidPathChars();
+        foreach (var c in trimmed)
+        {
+            if (invalidChars.Contains(c))
+                throw new ArgumentException($"Destination path contains invalid character: '{c}'", nameof(value));
+        }
+        
+        return trimmed;
     }
 
     /// <summary>

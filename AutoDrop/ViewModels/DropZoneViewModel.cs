@@ -10,7 +10,7 @@ namespace AutoDrop.ViewModels;
 /// <summary>
 /// ViewModel for the main drop zone window.
 /// </summary>
-public partial class DropZoneViewModel : Base.ViewModelBase
+public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
 {
     private readonly IFileOperationService _fileOperationService;
     private readonly IDestinationSuggestionService _suggestionService;
@@ -18,6 +18,7 @@ public partial class DropZoneViewModel : Base.ViewModelBase
     private readonly INotificationService _notificationService;
     private readonly IUndoService _undoService;
     private readonly ILogger<DropZoneViewModel> _logger;
+    private bool _disposed;
 
     [ObservableProperty]
     private bool _isDragOver;
@@ -406,5 +407,19 @@ public partial class DropZoneViewModel : Base.ViewModelBase
         EnableAutoMove = false;
         IsDragOver = false;
         StatusText = "Drop files here";
+    }
+
+    /// <summary>
+    /// Disposes resources and unsubscribes from events.
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed) return;
+        
+        _undoService.UndoAvailable -= OnUndoAvailable;
+        _undoService.UndoExecuted -= OnUndoExecuted;
+        _disposed = true;
+        
+        _logger.LogDebug("DropZoneViewModel disposed");
     }
 }

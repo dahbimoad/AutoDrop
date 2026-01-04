@@ -7,12 +7,13 @@ namespace AutoDrop.Services.Implementations;
 /// <summary>
 /// Implementation of rule service for managing file extension rules.
 /// </summary>
-public sealed class RuleService : IRuleService
+public sealed class RuleService : IRuleService, IDisposable
 {
     private readonly IStorageService _storageService;
     private readonly ILogger<RuleService> _logger;
     private RulesConfiguration? _cachedConfiguration;
     private readonly SemaphoreSlim _lock = new(1, 1);
+    private bool _disposed;
 
     public RuleService(IStorageService storageService, ILogger<RuleService> logger)
     {
@@ -22,18 +23,18 @@ public sealed class RuleService : IRuleService
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<FileRule>> GetAllRulesAsync()
+    public async Task<IReadOnlyList<FileRule>> GetAllRulesAsync(CancellationToken cancellationToken = default)
     {
-        var config = await GetConfigurationAsync();
+        var config = await GetConfigurationAsync(cancellationToken).ConfigureAwait(false);
         _logger.LogDebug("Retrieved {Count} rules", config.Rules.Count);
         return config.Rules.AsReadOnly();
     }
 
     /// <inheritdoc />
-    public async Task<FileRule?> GetRuleForExtensionAsync(string extension)
+    public async Task<FileRule?> GetRuleForExtensionAsync(string extension, CancellationToken cancellationToken = default)
     {
         var normalizedExtension = NormalizeExtension(extension);
-        var config = await GetConfigurationAsync();
+        var config = await GetConfigurationAsync(cancellationToken).ConfigureAwait(false);
         
         var rule = config.Rules.FirstOrDefault(r => 
             r.IsEnabled && string.Equals(r.Extension, normalizedExtension, StringComparison.OrdinalIgnoreCase));
@@ -45,16 +46,16 @@ public sealed class RuleService : IRuleService
     }
 
     /// <inheritdoc />
-    public async Task<FileRule> SaveRuleAsync(string extension, string destination, bool autoMove = false)
+    public async Task<FileRule> SaveRuleAsync(string extension, string destination, bool autoMove = false, CancellationToken cancellationToken = default)
     {
         var normalizedExtension = NormalizeExtension(extension);
         _logger.LogInformation("Saving rule: {Extension} -> {Destination} (AutoMove: {AutoMove})", 
             normalizedExtension, destination, autoMove);
         
-        await _lock.WaitAsync();
+        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var config = await GetConfigurationAsync();
+            var config = await GetConfigurationAsync(cancellationToken).ConfigureAwait(false);
             var existingRule = FindRule(config, normalizedExtension);
 
             if (existingRule != null)
@@ -76,7 +77,7 @@ public sealed class RuleService : IRuleService
                 config.Rules.Add(existingRule);
             }
 
-            await SaveConfigurationAsync(config);
+            await SaveConfigurationAsync(config, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("Rule saved successfully for {Extension}", normalizedExtension);
             return existingRule;
         }
@@ -87,15 +88,15 @@ public sealed class RuleService : IRuleService
     }
 
     /// <inheritdoc />
-    public async Task UpdateRuleAsync(FileRule rule)
+    public async Task UpdateRuleAsync(FileRule rule, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(rule);
         _logger.LogDebug("Updating rule for {Extension}", rule.Extension);
         
-        await _lock.WaitAsync();
+        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var config = await GetConfigurationAsync();
+            var config = await GetConfigurationAsync(cancellationToken).ConfigureAwait(false);
             var existingRule = FindRule(config, rule.Extension);
 
             if (existingRule == null)
@@ -108,7 +109,7 @@ public sealed class RuleService : IRuleService
             existingRule.AutoMove = rule.AutoMove;
             existingRule.IsEnabled = rule.IsEnabled;
 
-            await SaveConfigurationAsync(config);
+            await SaveConfigurationAsync(config, cancellationToken).ConfigureAwait(false);
             _logger.LogDebug("Rule updated for {Extension}", rule.Extension);
         }
         finally
@@ -118,15 +119,15 @@ public sealed class RuleService : IRuleService
     }
 
     /// <inheritdoc />
-    public async Task<bool> RemoveRuleAsync(string extension)
+    public async Task<bool> RemoveRuleAsync(string extension, CancellationToken cancellationToken = default)
     {
         var normalizedExtension = NormalizeExtension(extension);
         _logger.LogInformation("Removing rule for {Extension}", normalizedExtension);
         
-        await _lock.WaitAsync();
+        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var config = await GetConfigurationAsync();
+            var config = await GetConfigurationAsync(cancellationToken).ConfigureAwait(false);
             var rule = FindRule(config, normalizedExtension);
 
             if (rule == null)
@@ -136,7 +137,7 @@ public sealed class RuleService : IRuleService
             }
 
             config.Rules.Remove(rule);
-            await SaveConfigurationAsync(config);
+            await SaveConfigurationAsync(config, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("Rule removed for {Extension}", normalizedExtension);
             return true;
         }
@@ -147,21 +148,21 @@ public sealed class RuleService : IRuleService
     }
 
     /// <inheritdoc />
-    public async Task UpdateRuleUsageAsync(string extension)
+    public async Task UpdateRuleUsageAsync(string extension, CancellationToken cancellationToken = default)
     {
         var normalizedExtension = NormalizeExtension(extension);
         
-        await _lock.WaitAsync();
+        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var config = await GetConfigurationAsync();
+            var config = await GetConfigurationAsync(cancellationToken).ConfigureAwait(false);
             var rule = FindRule(config, normalizedExtension);
 
             if (rule != null)
             {
                 rule.LastUsedAt = DateTime.UtcNow;
                 rule.UseCount++;
-                await SaveConfigurationAsync(config);
+                await SaveConfigurationAsync(config, cancellationToken).ConfigureAwait(false);
                 _logger.LogDebug("Updated usage for {Extension}: Count={Count}", normalizedExtension, rule.UseCount);
             }
         }
@@ -172,21 +173,21 @@ public sealed class RuleService : IRuleService
     }
 
     /// <inheritdoc />
-    public async Task SetAutoMoveAsync(string extension, bool autoMove)
+    public async Task SetAutoMoveAsync(string extension, bool autoMove, CancellationToken cancellationToken = default)
     {
         var normalizedExtension = NormalizeExtension(extension);
         _logger.LogDebug("Setting AutoMove for {Extension} to {AutoMove}", normalizedExtension, autoMove);
         
-        await _lock.WaitAsync();
+        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var config = await GetConfigurationAsync();
+            var config = await GetConfigurationAsync(cancellationToken).ConfigureAwait(false);
             var rule = FindRule(config, normalizedExtension);
 
             if (rule != null)
             {
                 rule.AutoMove = autoMove;
-                await SaveConfigurationAsync(config);
+                await SaveConfigurationAsync(config, cancellationToken).ConfigureAwait(false);
             }
         }
         finally
@@ -196,21 +197,21 @@ public sealed class RuleService : IRuleService
     }
 
     /// <inheritdoc />
-    public async Task SetRuleEnabledAsync(string extension, bool isEnabled)
+    public async Task SetRuleEnabledAsync(string extension, bool isEnabled, CancellationToken cancellationToken = default)
     {
         var normalizedExtension = NormalizeExtension(extension);
         _logger.LogDebug("Setting IsEnabled for {Extension} to {IsEnabled}", normalizedExtension, isEnabled);
         
-        await _lock.WaitAsync();
+        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var config = await GetConfigurationAsync();
+            var config = await GetConfigurationAsync(cancellationToken).ConfigureAwait(false);
             var rule = FindRule(config, normalizedExtension);
 
             if (rule != null)
             {
                 rule.IsEnabled = isEnabled;
-                await SaveConfigurationAsync(config);
+                await SaveConfigurationAsync(config, cancellationToken).ConfigureAwait(false);
             }
         }
         finally
@@ -220,7 +221,7 @@ public sealed class RuleService : IRuleService
     }
 
     /// <inheritdoc />
-    public async Task<int> UpdateRulesDestinationAsync(string oldPath, string newPath)
+    public async Task<int> UpdateRulesDestinationAsync(string oldPath, string newPath, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(oldPath))
             throw new ArgumentException("Old path cannot be empty.", nameof(oldPath));
@@ -233,10 +234,10 @@ public sealed class RuleService : IRuleService
 
         _logger.LogInformation("Updating rules destination from '{OldPath}' to '{NewPath}'", normalizedOldPath, normalizedNewPath);
 
-        await _lock.WaitAsync();
+        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var config = await GetConfigurationAsync();
+            var config = await GetConfigurationAsync(cancellationToken).ConfigureAwait(false);
             var updatedCount = 0;
 
             foreach (var rule in config.Rules)
@@ -266,7 +267,7 @@ public sealed class RuleService : IRuleService
 
             if (updatedCount > 0)
             {
-                await SaveConfigurationAsync(config);
+                await SaveConfigurationAsync(config, cancellationToken).ConfigureAwait(false);
                 _logger.LogInformation("Updated {Count} rules to new destination path", updatedCount);
             }
             else
@@ -282,21 +283,21 @@ public sealed class RuleService : IRuleService
         }
     }
 
-    private async Task<RulesConfiguration> GetConfigurationAsync()
+    private async Task<RulesConfiguration> GetConfigurationAsync(CancellationToken cancellationToken = default)
     {
         if (_cachedConfiguration != null)
             return _cachedConfiguration;
 
         _logger.LogDebug("Loading rules configuration from disk");
-        _cachedConfiguration = await _storageService.ReadJsonAsync<RulesConfiguration>(_storageService.RulesFilePath)
+        _cachedConfiguration = await _storageService.ReadJsonAsync<RulesConfiguration>(_storageService.RulesFilePath, cancellationToken).ConfigureAwait(false)
                                ?? new RulesConfiguration();
         
         return _cachedConfiguration;
     }
 
-    private async Task SaveConfigurationAsync(RulesConfiguration config)
+    private async Task SaveConfigurationAsync(RulesConfiguration config, CancellationToken cancellationToken = default)
     {
-        await _storageService.WriteJsonAsync(_storageService.RulesFilePath, config);
+        await _storageService.WriteJsonAsync(_storageService.RulesFilePath, config, cancellationToken).ConfigureAwait(false);
         _cachedConfiguration = config;
     }
 
@@ -312,5 +313,17 @@ public sealed class RuleService : IRuleService
             throw new ArgumentException("Extension cannot be null or empty.", nameof(extension));
 
         return extension.StartsWith('.') ? extension.ToLowerInvariant() : $".{extension.ToLowerInvariant()}";
+    }
+
+    /// <summary>
+    /// Disposes resources used by the service.
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed) return;
+        
+        _lock.Dispose();
+        _disposed = true;
+        _logger.LogDebug("RuleService disposed");
     }
 }

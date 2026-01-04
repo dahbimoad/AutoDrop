@@ -7,12 +7,13 @@ namespace AutoDrop.Services.Implementations;
 /// <summary>
 /// Implementation of settings service for managing application settings.
 /// </summary>
-public sealed class SettingsService : ISettingsService
+public sealed class SettingsService : ISettingsService, IDisposable
 {
     private readonly IStorageService _storageService;
     private readonly ILogger<SettingsService> _logger;
     private AppSettings? _cachedSettings;
     private readonly SemaphoreSlim _lock = new(1, 1);
+    private bool _disposed;
 
     public SettingsService(IStorageService storageService, ILogger<SettingsService> logger)
     {
@@ -22,15 +23,15 @@ public sealed class SettingsService : ISettingsService
     }
 
     /// <inheritdoc />
-    public async Task<AppSettings> GetSettingsAsync()
+    public async Task<AppSettings> GetSettingsAsync(CancellationToken cancellationToken = default)
     {
         if (_cachedSettings != null)
             return _cachedSettings;
 
-        await _lock.WaitAsync();
+        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            _cachedSettings ??= await _storageService.ReadJsonAsync<AppSettings>(_storageService.SettingsFilePath)
+            _cachedSettings ??= await _storageService.ReadJsonAsync<AppSettings>(_storageService.SettingsFilePath, cancellationToken).ConfigureAwait(false)
                                 ?? new AppSettings();
             _logger.LogDebug("Settings loaded: {FolderCount} custom folders", _cachedSettings.CustomFolders.Count);
             return _cachedSettings;
@@ -42,14 +43,14 @@ public sealed class SettingsService : ISettingsService
     }
 
     /// <inheritdoc />
-    public async Task SaveSettingsAsync(AppSettings settings)
+    public async Task SaveSettingsAsync(AppSettings settings, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(settings);
 
-        await _lock.WaitAsync();
+        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            await _storageService.WriteJsonAsync(_storageService.SettingsFilePath, settings);
+            await _storageService.WriteJsonAsync(_storageService.SettingsFilePath, settings, cancellationToken).ConfigureAwait(false);
             _cachedSettings = settings;
             _logger.LogDebug("Settings saved");
         }
@@ -60,14 +61,14 @@ public sealed class SettingsService : ISettingsService
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<CustomFolder>> GetCustomFoldersAsync()
+    public async Task<IReadOnlyList<CustomFolder>> GetCustomFoldersAsync(CancellationToken cancellationToken = default)
     {
-        var settings = await GetSettingsAsync();
+        var settings = await GetSettingsAsync(cancellationToken).ConfigureAwait(false);
         return settings.CustomFolders.AsReadOnly();
     }
 
     /// <inheritdoc />
-    public async Task<CustomFolder> AddCustomFolderAsync(string name, string path, string icon = "📁", bool isPinned = false, bool createSubfolder = true)
+    public async Task<CustomFolder> AddCustomFolderAsync(string name, string path, string icon = "📁", bool isPinned = false, bool createSubfolder = true, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Folder name cannot be empty.", nameof(name));
@@ -80,10 +81,10 @@ public sealed class SettingsService : ISettingsService
         _logger.LogInformation("Adding custom folder: {Name} -> {Path} (CreateSubfolder: {CreateSubfolder})", 
             name, actualPath, createSubfolder);
 
-        await _lock.WaitAsync();
+        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var settings = await GetSettingsAsync();
+            var settings = await GetSettingsAsync(cancellationToken).ConfigureAwait(false);
             
             // Check for duplicate path
             if (settings.CustomFolders.Any(f => 
@@ -109,7 +110,7 @@ public sealed class SettingsService : ISettingsService
             };
 
             settings.CustomFolders.Add(folder);
-            await SaveSettingsInternalAsync(settings);
+            await SaveSettingsInternalAsync(settings, cancellationToken).ConfigureAwait(false);
             
             _logger.LogInformation("Custom folder added: {Name} (ID: {Id}) at {Path}", name, folder.Id, actualPath);
             return folder;
@@ -121,15 +122,15 @@ public sealed class SettingsService : ISettingsService
     }
 
     /// <inheritdoc />
-    public async Task UpdateCustomFolderAsync(CustomFolder folder)
+    public async Task UpdateCustomFolderAsync(CustomFolder folder, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(folder);
         _logger.LogDebug("Updating custom folder: {Id} - New Path: {Path}", folder.Id, folder.Path);
 
-        await _lock.WaitAsync();
+        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var settings = await GetSettingsAsync();
+            var settings = await GetSettingsAsync(cancellationToken).ConfigureAwait(false);
             var existing = settings.CustomFolders.FirstOrDefault(f => f.Id == folder.Id);
             
             if (existing == null)
@@ -146,7 +147,7 @@ public sealed class SettingsService : ISettingsService
             existing.IsPinned = folder.IsPinned;
 
             // Force save to disk
-            await SaveSettingsInternalAsync(settings);
+            await SaveSettingsInternalAsync(settings, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("Custom folder updated: {Name} - Path changed from '{OldPath}' to '{NewPath}'", 
                 folder.Name, oldPath, folder.Path);
         }
@@ -157,14 +158,14 @@ public sealed class SettingsService : ISettingsService
     }
 
     /// <inheritdoc />
-    public async Task<bool> RemoveCustomFolderAsync(Guid folderId)
+    public async Task<bool> RemoveCustomFolderAsync(Guid folderId, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Removing custom folder: {Id}", folderId);
         
-        await _lock.WaitAsync();
+        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var settings = await GetSettingsAsync();
+            var settings = await GetSettingsAsync(cancellationToken).ConfigureAwait(false);
             var folder = settings.CustomFolders.FirstOrDefault(f => f.Id == folderId);
             
             if (folder == null)
@@ -174,7 +175,7 @@ public sealed class SettingsService : ISettingsService
             }
 
             settings.CustomFolders.Remove(folder);
-            await SaveSettingsInternalAsync(settings);
+            await SaveSettingsInternalAsync(settings, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("Custom folder removed: {Name}", folder.Name);
             return true;
         }
@@ -184,9 +185,21 @@ public sealed class SettingsService : ISettingsService
         }
     }
 
-    private async Task SaveSettingsInternalAsync(AppSettings settings)
+    private async Task SaveSettingsInternalAsync(AppSettings settings, CancellationToken cancellationToken = default)
     {
-        await _storageService.WriteJsonAsync(_storageService.SettingsFilePath, settings);
+        await _storageService.WriteJsonAsync(_storageService.SettingsFilePath, settings, cancellationToken).ConfigureAwait(false);
         _cachedSettings = settings;
+    }
+
+    /// <summary>
+    /// Disposes resources used by the service.
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed) return;
+        
+        _lock.Dispose();
+        _disposed = true;
+        _logger.LogDebug("SettingsService disposed");
     }
 }

@@ -1,4 +1,4 @@
-using AutoDrop.Views.Windows;
+using AutoDrop.Services.Interfaces;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -12,14 +12,19 @@ namespace AutoDrop.ViewModels;
 public partial class TrayIconViewModel : Base.ViewModelBase
 {
     private readonly INavigationService _navigationService;
+    private readonly IWindowService _windowService;
     private readonly ILogger<TrayIconViewModel> _logger;
 
     [ObservableProperty]
     private bool _isDropZoneVisible = true;
 
-    public TrayIconViewModel(INavigationService navigationService, ILogger<TrayIconViewModel> logger)
+    public TrayIconViewModel(
+        INavigationService navigationService, 
+        IWindowService windowService,
+        ILogger<TrayIconViewModel> logger)
     {
         _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
+        _windowService = windowService ?? throw new ArgumentNullException(nameof(windowService));
         _logger = logger;
         _logger.LogDebug("TrayIconViewModel initialized");
     }
@@ -32,7 +37,7 @@ public partial class TrayIconViewModel : Base.ViewModelBase
     {
         _logger.LogDebug("ShowDropZone requested");
         IsDropZoneVisible = true;
-        OnShowDropZoneRequested?.Invoke();
+        _windowService.ShowDropZone();
     }
 
     /// <summary>
@@ -43,7 +48,7 @@ public partial class TrayIconViewModel : Base.ViewModelBase
     {
         _logger.LogDebug("HideDropZone requested");
         IsDropZoneVisible = false;
-        OnHideDropZoneRequested?.Invoke();
+        _windowService.HideDropZone();
     }
 
     /// <summary>
@@ -69,8 +74,7 @@ public partial class TrayIconViewModel : Base.ViewModelBase
     private void OpenRulesManager()
     {
         _logger.LogDebug("Opening Rules Manager");
-        var rulesWindow = App.GetService<RulesManagerWindow>();
-        rulesWindow.ShowDialog();
+        _windowService.ShowRulesManager();
     }
 
     /// <summary>
@@ -82,14 +86,4 @@ public partial class TrayIconViewModel : Base.ViewModelBase
         _logger.LogInformation("Application exit requested by user");
         System.Windows.Application.Current.Shutdown();
     }
-
-    /// <summary>
-    /// Event raised when show drop zone is requested.
-    /// </summary>
-    public event Action? OnShowDropZoneRequested;
-
-    /// <summary>
-    /// Event raised when hide drop zone is requested.
-    /// </summary>
-    public event Action? OnHideDropZoneRequested;
 }

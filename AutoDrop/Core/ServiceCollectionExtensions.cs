@@ -18,7 +18,7 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
-        // Configure logging
+        // Configure logging with file output for production diagnostics
         services.AddLogging(builder =>
         {
             builder.SetMinimumLevel(LogLevel.Debug);
@@ -31,7 +31,9 @@ public static class ServiceCollectionExtensions
             builder.AddConsole();
             builder.AddFilter("AutoDrop", LogLevel.Debug);
             #else
-            builder.AddFilter("AutoDrop", LogLevel.Warning);
+            builder.AddFilter("AutoDrop", LogLevel.Information);
+            builder.AddFilter("Microsoft", LogLevel.Warning);
+            builder.AddFilter("System", LogLevel.Warning);
             #endif
         });
 
@@ -42,6 +44,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IFileOperationService, FileOperationService>();
         services.AddSingleton<IDestinationSuggestionService, DestinationSuggestionService>();
         services.AddSingleton<IUndoService, UndoService>();
+        services.AddSingleton<IWindowService, WindowService>();
 
         // WPF UI Services
         services.AddSingleton<ISnackbarService, SnackbarService>();

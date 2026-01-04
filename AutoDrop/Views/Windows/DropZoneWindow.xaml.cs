@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using AutoDrop.ViewModels;
+using Microsoft.Extensions.Logging;
 using Wpf.Ui;
 
 namespace AutoDrop.Views.Windows;
@@ -13,11 +14,13 @@ public partial class DropZoneWindow : Window
 {
     private readonly DropZoneViewModel _viewModel;
     private readonly ISnackbarService _snackbarService;
+    private readonly ILogger<DropZoneWindow> _logger;
 
-    public DropZoneWindow(DropZoneViewModel viewModel, ISnackbarService snackbarService)
+    public DropZoneWindow(DropZoneViewModel viewModel, ISnackbarService snackbarService, ILogger<DropZoneWindow> logger)
     {
         _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
         _snackbarService = snackbarService ?? throw new ArgumentNullException(nameof(snackbarService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         InitializeComponent();
         DataContext = _viewModel;
@@ -79,25 +82,33 @@ public partial class DropZoneWindow : Window
         DropZoneBorder.BorderThickness = new Thickness(2);
         DropIcon.Symbol = Wpf.Ui.Controls.SymbolRegular.ArrowDownload24;
 
-        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        try
         {
-            var files = (string[]?)e.Data.GetData(DataFormats.FileDrop);
-            if (files != null && files.Length > 0)
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
             {
-                await _viewModel.HandleDropCommand.ExecuteAsync(files);
-                
-                // Show count badge for multiple files
-                if (files.Length > 1)
+                var files = (string[]?)e.Data.GetData(DataFormats.FileDrop);
+                if (files != null && files.Length > 0)
                 {
-                    CountText.Text = $"{files.Length} items";
-                    CountBadge.Visibility = Visibility.Visible;
-                }
-                else
-                {
-                    CountBadge.Visibility = Visibility.Collapsed;
+                    await _viewModel.HandleDropCommand.ExecuteAsync(files);
+                    
+                    // Show count badge for multiple files
+                    if (files.Length > 1)
+                    {
+                        CountText.Text = $"{files.Length} items";
+                        CountBadge.Visibility = Visibility.Visible;
+                    }
+                    else
+                    {
+                        CountBadge.Visibility = Visibility.Collapsed;
+                    }
                 }
             }
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling dropped files");
+        }
+        
         e.Handled = true;
     }
 

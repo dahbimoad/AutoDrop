@@ -716,6 +716,11 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
     }
 
     /// <summary>
+    /// Maximum allowed file size for import (1 MB) to prevent memory issues.
+    /// </summary>
+    private const long MaxImportFileSizeBytes = 1 * 1024 * 1024; // 1 MB
+
+    /// <summary>
     /// Imports rules from a JSON file.
     /// </summary>
     [RelayCommand]
@@ -735,6 +740,17 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
         IsBusy = true;
         try
         {
+            // Check file size before reading to prevent memory issues
+            var fileInfo = new FileInfo(dialog.FileName);
+            if (fileInfo.Length > MaxImportFileSizeBytes)
+            {
+                var maxSizeMB = MaxImportFileSizeBytes / (1024 * 1024);
+                _notificationService.ShowError("Import Failed", $"File is too large. Maximum size is {maxSizeMB} MB.");
+                _logger.LogWarning("Import rejected: file size {Size} bytes exceeds limit of {Limit} bytes", 
+                    fileInfo.Length, MaxImportFileSizeBytes);
+                return;
+            }
+
             var json = await File.ReadAllTextAsync(dialog.FileName);
             var importData = System.Text.Json.JsonSerializer.Deserialize<ImportData>(json);
             

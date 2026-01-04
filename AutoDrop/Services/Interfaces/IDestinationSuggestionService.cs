@@ -11,8 +11,9 @@ public interface IDestinationSuggestionService
     /// Gets destination suggestions for a dropped item.
     /// </summary>
     /// <param name="item">The dropped file or folder.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Collection of suggested destinations.</returns>
-    Task<IReadOnlyList<DestinationSuggestion>> GetSuggestionsAsync(DroppedItem item);
+    Task<IReadOnlyList<DestinationSuggestion>> GetSuggestionsAsync(DroppedItem item, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets the default destination folder for a file category.

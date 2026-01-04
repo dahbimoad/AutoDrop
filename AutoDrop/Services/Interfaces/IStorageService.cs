@@ -21,6 +21,11 @@ public interface IStorageService
     string SettingsFilePath { get; }
 
     /// <summary>
+    /// Gets the full path to the log files folder.
+    /// </summary>
+    string LogsFolder { get; }
+
+    /// <summary>
     /// Ensures the application data folder exists.
     /// </summary>
     void EnsureAppDataFolderExists();
@@ -30,8 +35,9 @@ public interface IStorageService
     /// </summary>
     /// <typeparam name="T">Type to deserialize to.</typeparam>
     /// <param name="filePath">Path to the file.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Deserialized object or default value.</returns>
-    Task<T?> ReadJsonAsync<T>(string filePath) where T : class;
+    Task<T?> ReadJsonAsync<T>(string filePath, CancellationToken cancellationToken = default) where T : class;
 
     /// <summary>
     /// Writes an object as JSON to a file.
@@ -39,5 +45,6 @@ public interface IStorageService
     /// <typeparam name="T">Type of object.</typeparam>
     /// <param name="filePath">Path to the file.</param>
     /// <param name="data">Object to serialize.</param>
-    Task WriteJsonAsync<T>(string filePath, T data) where T : class;
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task WriteJsonAsync<T>(string filePath, T data, CancellationToken cancellationToken = default) where T : class;
 }
