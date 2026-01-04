@@ -20,6 +20,7 @@ public static class ServiceCollectionExtensions
         // Core services (Singleton - shared across app)
         services.AddSingleton<IStorageService, StorageService>();
         services.AddSingleton<IRuleService, RuleService>();
+        services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IFileOperationService, FileOperationService>();
         services.AddSingleton<IDestinationSuggestionService, DestinationSuggestionService>();
 
@@ -31,9 +32,11 @@ public static class ServiceCollectionExtensions
         // ViewModels (Transient - new instance per request)
         services.AddTransient<DropZoneViewModel>();
         services.AddTransient<TrayIconViewModel>();
+        services.AddTransient<RulesManagerViewModel>();
 
         // Windows
         services.AddSingleton<DropZoneWindow>();
+        services.AddTransient<RulesManagerWindow>();
 
         return services;
     }
