@@ -11,16 +11,14 @@ public interface INotificationService
     /// Shows a success notification for a completed move operation.
     /// </summary>
     /// <param name="operation">The completed operation.</param>
-    /// <param name="onUndo">Callback when user clicks Undo.</param>
-    void ShowMoveSuccess(MoveOperation operation, Action? onUndo = null);
+    void ShowMoveSuccess(MoveOperation operation);
 
     /// <summary>
     /// Shows a success notification for an auto-move operation.
     /// </summary>
     /// <param name="itemName">Name of the moved item.</param>
     /// <param name="destinationName">Name of the destination folder.</param>
-    /// <param name="onUndo">Callback when user clicks Undo.</param>
-    void ShowAutoMoveSuccess(string itemName, string destinationName, Action? onUndo = null);
+    void ShowAutoMoveSuccess(string itemName, string destinationName);
 
     /// <summary>
     /// Shows an error notification.
@@ -49,3 +47,4 @@ public interface INotificationService
     /// <param name="itemName">Name of the item that was restored.</param>
     void ShowUndoSuccess(string itemName);
 }
+

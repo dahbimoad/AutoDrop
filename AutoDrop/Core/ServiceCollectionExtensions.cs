@@ -41,6 +41,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IFileOperationService, FileOperationService>();
         services.AddSingleton<IDestinationSuggestionService, DestinationSuggestionService>();
+        services.AddSingleton<IUndoService, UndoService>();
 
         // WPF UI Services
         services.AddSingleton<ISnackbarService, SnackbarService>();

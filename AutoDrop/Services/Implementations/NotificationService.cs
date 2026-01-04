@@ -23,7 +23,7 @@ public sealed class NotificationService : INotificationService
     }
 
     /// <inheritdoc />
-    public void ShowMoveSuccess(MoveOperation operation, Action? onUndo = null)
+    public void ShowMoveSuccess(MoveOperation operation)
     {
         ArgumentNullException.ThrowIfNull(operation);
 
@@ -41,7 +41,7 @@ public sealed class NotificationService : INotificationService
     }
 
     /// <inheritdoc />
-    public void ShowAutoMoveSuccess(string itemName, string destinationName, Action? onUndo = null)
+    public void ShowAutoMoveSuccess(string itemName, string destinationName)
     {
         var message = $"Auto-moved {itemName} → {destinationName}";
 

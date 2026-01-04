@@ -16,6 +16,7 @@ public partial class DropZoneViewModel : Base.ViewModelBase
     private readonly IDestinationSuggestionService _suggestionService;
     private readonly IRuleService _ruleService;
     private readonly INotificationService _notificationService;
+    private readonly IUndoService _undoService;
     private readonly ILogger<DropZoneViewModel> _logger;
 
     [ObservableProperty]
@@ -37,7 +38,20 @@ public partial class DropZoneViewModel : Base.ViewModelBase
     private bool _enableAutoMove;
 
     [ObservableProperty]
-    private MoveOperation? _lastOperation;
+    [NotifyPropertyChangedFor(nameof(CanUndo))]
+    [NotifyCanExecuteChangedFor(nameof(UndoCommand))]
+    private bool _isUndoAvailable;
+
+    [ObservableProperty]
+    private string _undoDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _undoTitle = "File moved";
+
+    [ObservableProperty]
+    private int _undoCount;
+
+    public bool CanUndo => IsUndoAvailable;
 
     public ObservableCollection<DroppedItem> DroppedItems { get; } = [];
     public ObservableCollection<DestinationSuggestion> Suggestions { get; } = [];
@@ -47,15 +61,72 @@ public partial class DropZoneViewModel : Base.ViewModelBase
         IDestinationSuggestionService suggestionService,
         IRuleService ruleService,
         INotificationService notificationService,
+        IUndoService undoService,
         ILogger<DropZoneViewModel> logger)
     {
         _fileOperationService = fileOperationService ?? throw new ArgumentNullException(nameof(fileOperationService));
         _suggestionService = suggestionService ?? throw new ArgumentNullException(nameof(suggestionService));
         _ruleService = ruleService ?? throw new ArgumentNullException(nameof(ruleService));
         _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
+        _undoService = undoService ?? throw new ArgumentNullException(nameof(undoService));
         _logger = logger;
+
+        // Subscribe to undo events
+        _undoService.UndoAvailable += OnUndoAvailable;
+        _undoService.UndoExecuted += OnUndoExecuted;
         
         _logger.LogDebug("DropZoneViewModel initialized");
+    }
+
+    private void OnUndoAvailable(object? sender, UndoAvailableEventArgs e)
+    {
+        // Ensure UI update on main thread
+        System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+        {
+            IsUndoAvailable = true;
+            UndoCount = e.TotalCount;
+            UndoDescription = e.Description;
+            UndoTitle = e.TotalCount == 1 ? "File moved" : $"{e.TotalCount} files moved";
+            _logger.LogDebug("Undo available: {Description}, count: {Count}", e.Description, e.TotalCount);
+        });
+        
+        // Auto-clear after expiration
+        Task.Delay(TimeSpan.FromSeconds(e.ExpirationSeconds)).ContinueWith(_ =>
+        {
+            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+            {
+                if (IsUndoAvailable && UndoDescription == e.Description)
+                {
+                    IsUndoAvailable = false;
+                    UndoDescription = string.Empty;
+                    UndoTitle = "File moved";
+                    UndoCount = 0;
+                }
+            });
+        });
+    }
+
+    private void OnUndoExecuted(object? sender, UndoExecutedEventArgs e)
+    {
+        System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+        {
+            IsUndoAvailable = false;
+            UndoDescription = string.Empty;
+            UndoTitle = "File moved";
+            UndoCount = 0;
+
+            if (e.Success)
+            {
+                var message = e.UndoneCount == 1 
+                    ? e.Description 
+                    : $"{e.UndoneCount} items";
+                _notificationService.ShowUndoSuccess(message);
+            }
+            else if (!string.IsNullOrEmpty(e.ErrorMessage))
+            {
+                _notificationService.ShowError("Undo Failed", e.ErrorMessage);
+            }
+        });
     }
 
     /// <summary>
@@ -151,16 +222,17 @@ public partial class DropZoneViewModel : Base.ViewModelBase
             try
             {
                 var operation = await _fileOperationService.MoveAsync(item.FullPath, rule.Destination);
-                LastOperation = operation;
+
+                // Register undo operation
+                RegisterUndoForOperation(operation);
 
                 // Update rule usage statistics
                 await _ruleService.UpdateRuleUsageAsync(item.Extension);
 
-                // Show success notification for auto-move
+                // Show success notification
                 _notificationService.ShowAutoMoveSuccess(
                     operation.ItemName,
-                    Path.GetFileName(rule.Destination),
-                    () => UndoLastOperationCommand.Execute(null));
+                    Path.GetFileName(rule.Destination));
                     
                 _logger.LogInformation("Auto-moved: {ItemName} -> {Destination}", item.Name, rule.Destination);
             }
@@ -221,7 +293,9 @@ public partial class DropZoneViewModel : Base.ViewModelBase
                 }
 
                 var operation = await _fileOperationService.MoveAsync(item.FullPath, suggestion.FullPath);
-                LastOperation = operation;
+
+                // Register undo operation
+                RegisterUndoForOperation(operation);
 
                 // Save rule if "Remember" is checked (with optional auto-move)
                 if (RememberChoice && !item.IsDirectory && !string.IsNullOrEmpty(item.Extension))
@@ -230,7 +304,7 @@ public partial class DropZoneViewModel : Base.ViewModelBase
                     await _ruleService.SaveRuleAsync(item.Extension, suggestion.FullPath, EnableAutoMove);
                 }
 
-                _notificationService.ShowMoveSuccess(operation, () => UndoLastOperationCommand.Execute(null));
+                _notificationService.ShowMoveSuccess(operation);
             }
         }
         catch (Exception ex)
@@ -276,34 +350,24 @@ public partial class DropZoneViewModel : Base.ViewModelBase
     }
 
     /// <summary>
-    /// Undoes the last move operation.
+    /// Executes the undo operation.
     /// </summary>
-    [RelayCommand]
-    private async Task UndoLastOperationAsync()
+    [RelayCommand(CanExecute = nameof(CanUndo))]
+    private async Task UndoAsync()
     {
-        if (LastOperation == null || !LastOperation.CanUndo)
-            return;
+        _logger.LogInformation("User initiated undo");
+        await _undoService.ExecuteUndoAsync();
+    }
 
-        _logger.LogInformation("Undoing operation for: {ItemName}", LastOperation.ItemName);
-
-        try
-        {
-            var success = await _fileOperationService.UndoMoveAsync(LastOperation);
-            if (success)
-            {
-                _notificationService.ShowUndoSuccess(LastOperation.ItemName);
-                _logger.LogInformation("Undo successful for: {ItemName}", LastOperation.ItemName);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Undo failed for: {ItemName}", LastOperation.ItemName);
-            _notificationService.ShowError("Undo Failed", ex.Message);
-        }
-        finally
-        {
-            LastOperation = null;
-        }
+    /// <summary>
+    /// Registers an undo operation for a completed move.
+    /// </summary>
+    private void RegisterUndoForOperation(MoveOperation operation)
+    {
+        _undoService.RegisterOperation(
+            operation.ItemName,
+            async () => await _fileOperationService.UndoMoveAsync(operation),
+            expirationSeconds: 10);
     }
 
     /// <summary>

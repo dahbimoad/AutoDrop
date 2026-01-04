@@ -147,7 +147,9 @@
                             <TextBlock Text="{Binding CurrentItem.Name}"
                                        FontWeight="SemiBold"
                                        FontSize="13"
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                        TextTrimming="CharacterEllipsis"
+                                       ToolTip="{Binding CurrentItem.Name}"
                                        MaxWidth="180"/>
                             <TextBlock Text="{Binding CurrentItem.Category}"
                                        FontSize="11"
@@ -164,6 +166,7 @@
                                 <ui:Button Margin="0,0,0,4"
                                            HorizontalAlignment="Stretch"
                                            HorizontalContentAlignment="Left"
+                                           ToolTip="{Binding FullPath}"
                                            Command="{Binding DataContext.MoveToDestinationCommand, RelativeSource={RelativeSource AncestorType=Popup}}"
                                            CommandParameter="{Binding}">
                                     <ui:Button.Style>
@@ -177,7 +180,10 @@
                                     </ui:Button.Style>
                                     <StackPanel Orientation="Horizontal">
                                         <ui:SymbolIcon Symbol="Folder24" Margin="0,0,8,0"/>
-                                        <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding DisplayName}" 
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   MaxWidth="150"/>
                                         <TextBlock Text="★" 
                                                    Margin="4,0,0,0"
                                                    Foreground="Gold"
@@ -220,5 +226,51 @@
                               VerticalAlignment="Bottom"
                               HorizontalAlignment="Center"
                               Margin="0,0,0,170"/>
+
+        <!-- Undo Popup - Shows when undo is available -->
+        <Popup x:Name="UndoPopup"
+               IsOpen="{Binding IsUndoAvailable}"
+               StaysOpen="True"
+               Placement="Bottom"
+               PlacementTarget="{Binding ElementName=DropZoneBorder}"
+               VerticalOffset="8"
+               AllowsTransparency="True"
+               PopupAnimation="Fade">
+            <Border CornerRadius="8"
+                    Background="{DynamicResource ApplicationBackgroundBrush}"
+                    BorderBrush="{DynamicResource SystemAccentColorSecondaryBrush}"
+                    BorderThickness="1.5"
+                    Padding="12,10"
+                    MinWidth="200"
+                    MaxWidth="280">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Text="{Binding UndoTitle}"
+                                   FontSize="10"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Text="{Binding UndoDescription}"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                   TextTrimming="CharacterEllipsis"
+                                   ToolTip="{Binding UndoDescription}"
+                                   MaxWidth="160"/>
+                    </StackPanel>
+                    
+                    <ui:Button Grid.Column="1"
+                               Content="Undo"
+                               Icon="{ui:SymbolIcon ArrowUndo24}"
+                               Appearance="Primary"
+                               Command="{Binding UndoCommand}"
+                               Padding="12,6"
+                               FontSize="12"/>
+                </Grid>
+            </Border>
+        </Popup>
     </Grid>
 </Window>
