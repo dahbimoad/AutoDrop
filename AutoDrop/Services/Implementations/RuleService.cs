@@ -1,5 +1,6 @@
 using AutoDrop.Models;
 using AutoDrop.Services.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace AutoDrop.Services.Implementations;
 
@@ -9,18 +10,22 @@ namespace AutoDrop.Services.Implementations;
 public sealed class RuleService : IRuleService
 {
     private readonly IStorageService _storageService;
+    private readonly ILogger<RuleService> _logger;
     private RulesConfiguration? _cachedConfiguration;
     private readonly SemaphoreSlim _lock = new(1, 1);
 
-    public RuleService(IStorageService storageService)
+    public RuleService(IStorageService storageService, ILogger<RuleService> logger)
     {
         _storageService = storageService ?? throw new ArgumentNullException(nameof(storageService));
+        _logger = logger;
+        _logger.LogDebug("RuleService initialized");
     }
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<FileRule>> GetAllRulesAsync()
     {
         var config = await GetConfigurationAsync();
+        _logger.LogDebug("Retrieved {Count} rules", config.Rules.Count);
         return config.Rules.AsReadOnly();
     }
 
@@ -30,14 +35,21 @@ public sealed class RuleService : IRuleService
         var normalizedExtension = NormalizeExtension(extension);
         var config = await GetConfigurationAsync();
         
-        return config.Rules.FirstOrDefault(r => 
+        var rule = config.Rules.FirstOrDefault(r => 
             r.IsEnabled && string.Equals(r.Extension, normalizedExtension, StringComparison.OrdinalIgnoreCase));
+        
+        _logger.LogDebug("GetRuleForExtension({Extension}): {Result}", 
+            normalizedExtension, rule != null ? $"Found -> {rule.Destination}" : "Not found");
+        
+        return rule;
     }
 
     /// <inheritdoc />
     public async Task<FileRule> SaveRuleAsync(string extension, string destination, bool autoMove = false)
     {
         var normalizedExtension = NormalizeExtension(extension);
+        _logger.LogInformation("Saving rule: {Extension} -> {Destination} (AutoMove: {AutoMove})", 
+            normalizedExtension, destination, autoMove);
         
         await _lock.WaitAsync();
         try
@@ -47,12 +59,14 @@ public sealed class RuleService : IRuleService
 
             if (existingRule != null)
             {
+                _logger.LogDebug("Updating existing rule for {Extension}", normalizedExtension);
                 existingRule.Destination = destination;
                 existingRule.AutoMove = autoMove;
                 existingRule.LastUsedAt = DateTime.UtcNow;
             }
             else
             {
+                _logger.LogDebug("Creating new rule for {Extension}", normalizedExtension);
                 existingRule = new FileRule
                 {
                     Extension = normalizedExtension,
@@ -63,6 +77,7 @@ public sealed class RuleService : IRuleService
             }
 
             await SaveConfigurationAsync(config);
+            _logger.LogInformation("Rule saved successfully for {Extension}", normalizedExtension);
             return existingRule;
         }
         finally
@@ -75,6 +90,7 @@ public sealed class RuleService : IRuleService
     public async Task UpdateRuleAsync(FileRule rule)
     {
         ArgumentNullException.ThrowIfNull(rule);
+        _logger.LogDebug("Updating rule for {Extension}", rule.Extension);
         
         await _lock.WaitAsync();
         try
@@ -83,13 +99,17 @@ public sealed class RuleService : IRuleService
             var existingRule = FindRule(config, rule.Extension);
 
             if (existingRule == null)
+            {
+                _logger.LogWarning("Rule not found for extension: {Extension}", rule.Extension);
                 throw new InvalidOperationException($"Rule for extension '{rule.Extension}' not found.");
+            }
 
             existingRule.Destination = rule.Destination;
             existingRule.AutoMove = rule.AutoMove;
             existingRule.IsEnabled = rule.IsEnabled;
 
             await SaveConfigurationAsync(config);
+            _logger.LogDebug("Rule updated for {Extension}", rule.Extension);
         }
         finally
         {
@@ -101,6 +121,7 @@ public sealed class RuleService : IRuleService
     public async Task<bool> RemoveRuleAsync(string extension)
     {
         var normalizedExtension = NormalizeExtension(extension);
+        _logger.LogInformation("Removing rule for {Extension}", normalizedExtension);
         
         await _lock.WaitAsync();
         try
@@ -109,10 +130,14 @@ public sealed class RuleService : IRuleService
             var rule = FindRule(config, normalizedExtension);
 
             if (rule == null)
+            {
+                _logger.LogWarning("Cannot remove - rule not found: {Extension}", normalizedExtension);
                 return false;
+            }
 
             config.Rules.Remove(rule);
             await SaveConfigurationAsync(config);
+            _logger.LogInformation("Rule removed for {Extension}", normalizedExtension);
             return true;
         }
         finally
@@ -137,6 +162,7 @@ public sealed class RuleService : IRuleService
                 rule.LastUsedAt = DateTime.UtcNow;
                 rule.UseCount++;
                 await SaveConfigurationAsync(config);
+                _logger.LogDebug("Updated usage for {Extension}: Count={Count}", normalizedExtension, rule.UseCount);
             }
         }
         finally
@@ -149,6 +175,7 @@ public sealed class RuleService : IRuleService
     public async Task SetAutoMoveAsync(string extension, bool autoMove)
     {
         var normalizedExtension = NormalizeExtension(extension);
+        _logger.LogDebug("Setting AutoMove for {Extension} to {AutoMove}", normalizedExtension, autoMove);
         
         await _lock.WaitAsync();
         try
@@ -172,6 +199,7 @@ public sealed class RuleService : IRuleService
     public async Task SetRuleEnabledAsync(string extension, bool isEnabled)
     {
         var normalizedExtension = NormalizeExtension(extension);
+        _logger.LogDebug("Setting IsEnabled for {Extension} to {IsEnabled}", normalizedExtension, isEnabled);
         
         await _lock.WaitAsync();
         try
@@ -196,6 +224,7 @@ public sealed class RuleService : IRuleService
         if (_cachedConfiguration != null)
             return _cachedConfiguration;
 
+        _logger.LogDebug("Loading rules configuration from disk");
         _cachedConfiguration = await _storageService.ReadJsonAsync<RulesConfiguration>(_storageService.RulesFilePath)
                                ?? new RulesConfiguration();
         

@@ -1,6 +1,6 @@
-using AutoDrop.Core.Constants;
 using AutoDrop.Models;
 using AutoDrop.Services.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace AutoDrop.Services.Implementations;
 
@@ -10,12 +10,15 @@ namespace AutoDrop.Services.Implementations;
 public sealed class SettingsService : ISettingsService
 {
     private readonly IStorageService _storageService;
+    private readonly ILogger<SettingsService> _logger;
     private AppSettings? _cachedSettings;
     private readonly SemaphoreSlim _lock = new(1, 1);
 
-    public SettingsService(IStorageService storageService)
+    public SettingsService(IStorageService storageService, ILogger<SettingsService> logger)
     {
         _storageService = storageService ?? throw new ArgumentNullException(nameof(storageService));
+        _logger = logger;
+        _logger.LogDebug("SettingsService initialized");
     }
 
     /// <inheritdoc />
@@ -29,6 +32,7 @@ public sealed class SettingsService : ISettingsService
         {
             _cachedSettings ??= await _storageService.ReadJsonAsync<AppSettings>(_storageService.SettingsFilePath)
                                 ?? new AppSettings();
+            _logger.LogDebug("Settings loaded: {FolderCount} custom folders", _cachedSettings.CustomFolders.Count);
             return _cachedSettings;
         }
         finally
@@ -47,6 +51,7 @@ public sealed class SettingsService : ISettingsService
         {
             await _storageService.WriteJsonAsync(_storageService.SettingsFilePath, settings);
             _cachedSettings = settings;
+            _logger.LogDebug("Settings saved");
         }
         finally
         {
@@ -69,41 +74,29 @@ public sealed class SettingsService : ISettingsService
         if (string.IsNullOrWhiteSpace(path))
             throw new ArgumentException("Folder path cannot be empty.", nameof(path));
 
+        // Determine the actual folder path
+        var actualPath = createSubfolder ? Path.Combine(path, name) : path;
+        
+        _logger.LogInformation("Adding custom folder: {Name} -> {Path} (CreateSubfolder: {CreateSubfolder})", 
+            name, actualPath, createSubfolder);
+
         await _lock.WaitAsync();
         try
         {
-            // Get settings directly without recursively calling GetSettingsAsync (avoids deadlock)
-            _cachedSettings ??= await _storageService.ReadJsonAsync<AppSettings>(_storageService.SettingsFilePath)
-                                ?? new AppSettings();
-            
-            // Determine the actual folder path
-            // If createSubfolder is true, we create a subfolder with the name inside the given path
-            // Otherwise, we use the path directly (for cases where user browses to an existing folder)
-            string actualPath;
-            if (createSubfolder)
-            {
-                // Sanitize folder name for file system
-                var safeName = SanitizeFolderName(name);
-                actualPath = Path.Combine(path, safeName);
-            }
-            else
-            {
-                actualPath = path;
-            }
-            
-            // Normalize the path
-            actualPath = Path.GetFullPath(actualPath);
+            var settings = await GetSettingsAsync();
             
             // Check for duplicate path
-            if (_cachedSettings.CustomFolders.Any(f => 
+            if (settings.CustomFolders.Any(f => 
                 string.Equals(f.Path, actualPath, StringComparison.OrdinalIgnoreCase)))
             {
-                throw new InvalidOperationException($"A custom folder at '{actualPath}' already exists.");
+                _logger.LogWarning("Duplicate folder path rejected: {Path}", actualPath);
+                throw new InvalidOperationException($"A custom folder with path '{actualPath}' already exists.");
             }
 
-            // Create the physical folder if it doesn't exist
+            // Create the folder physically if it doesn't exist
             if (!Directory.Exists(actualPath))
             {
+                _logger.LogDebug("Creating physical folder: {Path}", actualPath);
                 Directory.CreateDirectory(actualPath);
             }
 
@@ -115,9 +108,10 @@ public sealed class SettingsService : ISettingsService
                 IsPinned = isPinned
             };
 
-            _cachedSettings.CustomFolders.Add(folder);
-            await SaveSettingsInternalAsync(_cachedSettings);
+            settings.CustomFolders.Add(folder);
+            await SaveSettingsInternalAsync(settings);
             
+            _logger.LogInformation("Custom folder added: {Name} (ID: {Id}) at {Path}", name, folder.Id, actualPath);
             return folder;
         }
         finally
@@ -130,25 +124,27 @@ public sealed class SettingsService : ISettingsService
     public async Task UpdateCustomFolderAsync(CustomFolder folder)
     {
         ArgumentNullException.ThrowIfNull(folder);
+        _logger.LogDebug("Updating custom folder: {Id}", folder.Id);
 
         await _lock.WaitAsync();
         try
         {
-            // Get settings directly without recursively calling GetSettingsAsync (avoids deadlock)
-            _cachedSettings ??= await _storageService.ReadJsonAsync<AppSettings>(_storageService.SettingsFilePath)
-                                ?? new AppSettings();
-            
-            var existing = _cachedSettings.CustomFolders.FirstOrDefault(f => f.Id == folder.Id);
+            var settings = await GetSettingsAsync();
+            var existing = settings.CustomFolders.FirstOrDefault(f => f.Id == folder.Id);
             
             if (existing == null)
+            {
+                _logger.LogWarning("Folder not found for update: {Id}", folder.Id);
                 throw new InvalidOperationException($"Custom folder with ID '{folder.Id}' not found.");
+            }
 
             existing.Name = folder.Name;
             existing.Path = folder.Path;
             existing.Icon = folder.Icon;
             existing.IsPinned = folder.IsPinned;
 
-            await SaveSettingsInternalAsync(_cachedSettings);
+            await SaveSettingsInternalAsync(settings);
+            _logger.LogDebug("Custom folder updated: {Name}", folder.Name);
         }
         finally
         {
@@ -159,20 +155,23 @@ public sealed class SettingsService : ISettingsService
     /// <inheritdoc />
     public async Task<bool> RemoveCustomFolderAsync(Guid folderId)
     {
+        _logger.LogInformation("Removing custom folder: {Id}", folderId);
+        
         await _lock.WaitAsync();
         try
         {
-            // Get settings directly without recursively calling GetSettingsAsync (avoids deadlock)
-            _cachedSettings ??= await _storageService.ReadJsonAsync<AppSettings>(_storageService.SettingsFilePath)
-                                ?? new AppSettings();
-            
-            var folder = _cachedSettings.CustomFolders.FirstOrDefault(f => f.Id == folderId);
+            var settings = await GetSettingsAsync();
+            var folder = settings.CustomFolders.FirstOrDefault(f => f.Id == folderId);
             
             if (folder == null)
+            {
+                _logger.LogWarning("Folder not found for removal: {Id}", folderId);
                 return false;
+            }
 
-            _cachedSettings.CustomFolders.Remove(folder);
-            await SaveSettingsInternalAsync(_cachedSettings);
+            settings.CustomFolders.Remove(folder);
+            await SaveSettingsInternalAsync(settings);
+            _logger.LogInformation("Custom folder removed: {Name}", folder.Name);
             return true;
         }
         finally
@@ -187,16 +186,14 @@ public sealed class SettingsService : ISettingsService
         await _lock.WaitAsync();
         try
         {
-            // Get settings directly without recursively calling GetSettingsAsync (avoids deadlock)
-            _cachedSettings ??= await _storageService.ReadJsonAsync<AppSettings>(_storageService.SettingsFilePath)
-                                ?? new AppSettings();
-            
-            var folder = _cachedSettings.CustomFolders.FirstOrDefault(f => f.Id == folderId);
+            var settings = await GetSettingsAsync();
+            var folder = settings.CustomFolders.FirstOrDefault(f => f.Id == folderId);
             
             if (folder != null)
             {
                 folder.UseCount++;
-                await SaveSettingsInternalAsync(_cachedSettings);
+                await SaveSettingsInternalAsync(settings);
+                _logger.LogDebug("Folder usage incremented: {Name} -> {Count}", folder.Name, folder.UseCount);
             }
         }
         finally
@@ -209,15 +206,5 @@ public sealed class SettingsService : ISettingsService
     {
         await _storageService.WriteJsonAsync(_storageService.SettingsFilePath, settings);
         _cachedSettings = settings;
-    }
-    
-    /// <summary>
-    /// Sanitizes a folder name by removing invalid characters.
-    /// </summary>
-    private static string SanitizeFolderName(string name)
-    {
-        var invalidChars = Path.GetInvalidFileNameChars();
-        var sanitized = string.Join("_", name.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
-        return sanitized.Trim();
     }
 }

@@ -5,6 +5,7 @@ using AutoDrop.Models;
 using AutoDrop.Services.Interfaces;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 
 namespace AutoDrop.ViewModels;
 
@@ -17,6 +18,7 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
     private readonly IRuleService _ruleService;
     private readonly ISettingsService _settingsService;
     private readonly INotificationService _notificationService;
+    private readonly ILogger<RulesManagerViewModel> _logger;
 
     #region Observable Properties
 
@@ -84,15 +86,19 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
     public RulesManagerViewModel(
         IRuleService ruleService,
         ISettingsService settingsService,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        ILogger<RulesManagerViewModel> logger)
     {
         _ruleService = ruleService ?? throw new ArgumentNullException(nameof(ruleService));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
+        _logger = logger;
 
         // Setup filtered collection view for rules
         FilteredRules = CollectionViewSource.GetDefaultView(Rules);
         FilteredRules.Filter = FilterRules;
+        
+        _logger.LogDebug("RulesManagerViewModel initialized");
     }
 
     #region Initialization
@@ -103,10 +109,12 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
     [RelayCommand]
     public async Task LoadDataAsync()
     {
+        _logger.LogDebug("Loading rules and folders data");
         IsBusy = true;
         try
         {
             await Task.WhenAll(LoadRulesAsync(), LoadCustomFoldersAsync());
+            _logger.LogDebug("Data loaded: {RuleCount} rules, {FolderCount} folders", Rules.Count, CustomFolders.Count);
         }
         finally
         {
@@ -203,6 +211,9 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
             return;
         }
 
+        _logger.LogInformation("Creating new rule: {Extension} -> {Destination} (AutoMove: {AutoMove})", 
+            NewExtension, NewDestination, NewAutoMove);
+
         IsBusy = true;
         try
         {
@@ -215,9 +226,11 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
             ResetNewRuleFields();
             
             _notificationService.ShowSuccess("Rule Created", $"Rule for {rule.Extension} created successfully.");
+            _logger.LogInformation("Rule created successfully for {Extension}", rule.Extension);
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to create rule for {Extension}", NewExtension);
             _notificationService.ShowError("Error", ex.Message);
         }
         finally
@@ -246,6 +259,9 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
     private async Task ToggleAutoMoveAsync(FileRule? rule)
     {
         if (rule == null) return;
+
+        _logger.LogDebug("Toggling AutoMove for {Extension}: {Current} -> {New}", 
+            rule.Extension, rule.AutoMove, !rule.AutoMove);
 
         try
         {
@@ -315,6 +331,8 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
     {
         if (rule == null) return;
 
+        _logger.LogInformation("Deleting rule for {Extension}", rule.Extension);
+
         IsBusy = true;
         try
         {
@@ -324,10 +342,12 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
                 Rules.Remove(rule);
                 SelectedRule = null;
                 _notificationService.ShowSuccess("Rule Deleted", $"Rule for {rule.Extension} deleted.");
+                _logger.LogInformation("Rule deleted for {Extension}", rule.Extension);
             }
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to delete rule for {Extension}", rule.Extension);
             _notificationService.ShowError("Error", ex.Message);
         }
         finally
@@ -404,6 +424,9 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
             return;
         }
 
+        _logger.LogInformation("Creating new folder: {Name} at {Path} (CreateSubfolder: {CreateNew})", 
+            NewFolderName, normalizedPath, CreateNewFolder);
+
         IsBusy = true;
         try
         {
@@ -421,9 +444,11 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
             ResetNewFolderFields();
             
             _notificationService.ShowSuccess("Folder Created", $"Folder '{folder.Name}' created at {folder.Path}");
+            _logger.LogInformation("Folder created: {Name} -> {Path}", folder.Name, folder.Path);
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to create folder: {Name}", NewFolderName);
             _notificationService.ShowError("Error", ex.Message);
         }
         finally
@@ -505,6 +530,8 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
     {
         if (folder == null) return;
 
+        _logger.LogInformation("Deleting custom folder: {Name}", folder.Name);
+
         IsBusy = true;
         try
         {
@@ -514,10 +541,12 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
                 CustomFolders.Remove(folder);
                 SelectedFolder = null;
                 _notificationService.ShowSuccess("Folder Deleted", $"Custom folder '{folder.Name}' deleted.");
+                _logger.LogInformation("Folder deleted: {Name}", folder.Name);
             }
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to delete folder: {Name}", folder.Name);
             _notificationService.ShowError("Error", ex.Message);
         }
         finally
@@ -555,6 +584,8 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
         if (dialog.ShowDialog() != true)
             return;
 
+        _logger.LogInformation("Exporting rules to: {Path}", dialog.FileName);
+
         IsBusy = true;
         try
         {
@@ -565,9 +596,11 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
             
             await File.WriteAllTextAsync(dialog.FileName, json);
             _notificationService.ShowSuccess("Export Complete", $"Exported {rules.Count} rules.");
+            _logger.LogInformation("Exported {Count} rules to {Path}", rules.Count, dialog.FileName);
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Export failed");
             _notificationService.ShowError("Export Failed", ex.Message);
         }
         finally
@@ -591,6 +624,8 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
         if (dialog.ShowDialog() != true)
             return;
 
+        _logger.LogInformation("Importing rules from: {Path}", dialog.FileName);
+
         IsBusy = true;
         try
         {
@@ -612,9 +647,11 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
 
             await LoadRulesAsync();
             _notificationService.ShowSuccess("Import Complete", $"Imported {importedCount} rules.");
+            _logger.LogInformation("Imported {Count} rules from {Path}", importedCount, dialog.FileName);
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Import failed from {Path}", dialog.FileName);
             _notificationService.ShowError("Import Failed", ex.Message);
         }
         finally

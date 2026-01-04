@@ -1,6 +1,7 @@
 using AutoDrop.Core.Constants;
 using AutoDrop.Models;
 using AutoDrop.Services.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace AutoDrop.Services.Implementations;
 
@@ -12,12 +13,17 @@ public sealed class DestinationSuggestionService : IDestinationSuggestionService
 {
     private readonly IRuleService _ruleService;
     private readonly ISettingsService _settingsService;
+    private readonly ILogger<DestinationSuggestionService> _logger;
     private readonly IReadOnlyDictionary<string, string> _categoryToFolder;
 
-    public DestinationSuggestionService(IRuleService ruleService, ISettingsService settingsService)
+    public DestinationSuggestionService(
+        IRuleService ruleService, 
+        ISettingsService settingsService,
+        ILogger<DestinationSuggestionService> logger)
     {
         _ruleService = ruleService ?? throw new ArgumentNullException(nameof(ruleService));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _logger = logger;
         
         // Map categories to Windows known folders
         _categoryToFolder = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -31,12 +37,16 @@ public sealed class DestinationSuggestionService : IDestinationSuggestionService
             { FileCategories.Unknown, Environment.GetFolderPath(Environment.SpecialFolder.Desktop) },
             { "Folder", Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) }
         };
+        
+        _logger.LogDebug("DestinationSuggestionService initialized");
     }
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<DestinationSuggestion>> GetSuggestionsAsync(DroppedItem item)
     {
         ArgumentNullException.ThrowIfNull(item);
+        _logger.LogDebug("Getting suggestions for: {ItemName} (Category: {Category}, Extension: {Extension})", 
+            item.Name, item.Category, item.Extension);
 
         var suggestions = new List<DestinationSuggestion>();
 
@@ -49,6 +59,8 @@ public sealed class DestinationSuggestionService : IDestinationSuggestionService
             var rule = await _ruleService.GetRuleForExtensionAsync(item.Extension);
             if (rule != null && Directory.Exists(rule.Destination))
             {
+                _logger.LogDebug("Found rule for {Extension}: {Destination}", item.Extension, rule.Destination);
+                
                 // Check if already added from custom folders
                 if (!suggestions.Any(s => string.Equals(s.FullPath, rule.Destination, StringComparison.OrdinalIgnoreCase)))
                 {
@@ -92,12 +104,15 @@ public sealed class DestinationSuggestionService : IDestinationSuggestionService
         AddAlternativeDestinations(suggestions, item.Category);
 
         // Sort: Recommended first, then by confidence
-        return suggestions
+        var result = suggestions
             .OrderByDescending(s => s.IsRecommended)
             .ThenByDescending(s => s.Confidence)
             .Take(AppConstants.MaxSuggestions)
             .ToList()
             .AsReadOnly();
+
+        _logger.LogDebug("Returning {Count} suggestions for {ItemName}", result.Count, item.Name);
+        return result;
     }
 
     /// <summary>
@@ -114,6 +129,7 @@ public sealed class DestinationSuggestionService : IDestinationSuggestionService
                 .OrderByDescending(f => f.IsPinned)
                 .ThenBy(f => f.Name);
 
+            var addedCount = 0;
             foreach (var folder in customFolders)
             {
                 if (suggestions.Count >= AppConstants.MaxSuggestions)
@@ -128,11 +144,14 @@ public sealed class DestinationSuggestionService : IDestinationSuggestionService
                     Confidence = folder.IsPinned ? 95 : 75,
                     IconGlyph = "\uE838" // FolderFilled icon for custom folders
                 });
+                addedCount++;
             }
+            
+            _logger.LogDebug("Added {Count} custom folder suggestions", addedCount);
         }
-        catch
+        catch (Exception ex)
         {
-            // If settings fail to load, continue without custom folders
+            _logger.LogWarning(ex, "Failed to load custom folders for suggestions");
         }
     }
 

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using AutoDrop.Core.Constants;
 using AutoDrop.Services.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace AutoDrop.Services.Implementations;
 
@@ -9,6 +10,8 @@ namespace AutoDrop.Services.Implementations;
 /// </summary>
 public sealed class StorageService : IStorageService
 {
+    private readonly ILogger<StorageService> _logger;
+    
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -17,11 +20,14 @@ public sealed class StorageService : IStorageService
 
     private readonly string _appDataFolder;
 
-    public StorageService()
+    public StorageService(ILogger<StorageService> logger)
     {
+        _logger = logger;
         _appDataFolder = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             AppConstants.AppDataFolderName);
+        
+        _logger.LogDebug("StorageService initialized. AppDataFolder: {AppDataFolder}", _appDataFolder);
     }
 
     /// <inheritdoc />
@@ -39,6 +45,7 @@ public sealed class StorageService : IStorageService
         if (!Directory.Exists(_appDataFolder))
         {
             Directory.CreateDirectory(_appDataFolder);
+            _logger.LogInformation("Created app data folder: {Folder}", _appDataFolder);
         }
     }
 
@@ -47,17 +54,21 @@ public sealed class StorageService : IStorageService
     {
         if (!File.Exists(filePath))
         {
+            _logger.LogDebug("File not found, returning null: {FilePath}", filePath);
             return null;
         }
 
         try
         {
+            _logger.LogDebug("Reading JSON file: {FilePath}", filePath);
             await using var stream = File.OpenRead(filePath);
-            return await JsonSerializer.DeserializeAsync<T>(stream, JsonOptions);
+            var result = await JsonSerializer.DeserializeAsync<T>(stream, JsonOptions);
+            _logger.LogDebug("Successfully read {Type} from {FilePath}", typeof(T).Name, filePath);
+            return result;
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            // Return null if file is corrupted
+            _logger.LogWarning(ex, "Failed to deserialize JSON from {FilePath}. File may be corrupted.", filePath);
             return null;
         }
     }
@@ -71,9 +82,12 @@ public sealed class StorageService : IStorageService
         if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
         {
             Directory.CreateDirectory(directory);
+            _logger.LogDebug("Created directory: {Directory}", directory);
         }
 
+        _logger.LogDebug("Writing {Type} to {FilePath}", typeof(T).Name, filePath);
         await using var stream = File.Create(filePath);
         await JsonSerializer.SerializeAsync(stream, data, JsonOptions);
+        _logger.LogDebug("Successfully wrote {Type} to {FilePath}", typeof(T).Name, filePath);
     }
 }

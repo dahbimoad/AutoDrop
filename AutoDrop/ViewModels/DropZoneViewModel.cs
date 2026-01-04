@@ -3,6 +3,7 @@ using AutoDrop.Models;
 using AutoDrop.Services.Interfaces;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 
 namespace AutoDrop.ViewModels;
 
@@ -15,6 +16,7 @@ public partial class DropZoneViewModel : Base.ViewModelBase
     private readonly IDestinationSuggestionService _suggestionService;
     private readonly IRuleService _ruleService;
     private readonly INotificationService _notificationService;
+    private readonly ILogger<DropZoneViewModel> _logger;
 
     [ObservableProperty]
     private bool _isDragOver;
@@ -44,12 +46,16 @@ public partial class DropZoneViewModel : Base.ViewModelBase
         IFileOperationService fileOperationService,
         IDestinationSuggestionService suggestionService,
         IRuleService ruleService,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        ILogger<DropZoneViewModel> logger)
     {
         _fileOperationService = fileOperationService ?? throw new ArgumentNullException(nameof(fileOperationService));
         _suggestionService = suggestionService ?? throw new ArgumentNullException(nameof(suggestionService));
         _ruleService = ruleService ?? throw new ArgumentNullException(nameof(ruleService));
         _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
+        _logger = logger;
+        
+        _logger.LogDebug("DropZoneViewModel initialized");
     }
 
     /// <summary>
@@ -62,6 +68,8 @@ public partial class DropZoneViewModel : Base.ViewModelBase
         if (paths is not { Length: > 0 })
             return;
 
+        _logger.LogInformation("Files dropped: {Count} items", paths.Length);
+
         DroppedItems.Clear();
         Suggestions.Clear();
 
@@ -69,6 +77,7 @@ public partial class DropZoneViewModel : Base.ViewModelBase
         {
             var item = DroppedItem.FromPath(path);
             DroppedItems.Add(item);
+            _logger.LogDebug("Processing dropped item: {Name} ({Category})", item.Name, item.Category);
         }
 
         // Check if ALL items have auto-move rules
@@ -82,12 +91,15 @@ public partial class DropZoneViewModel : Base.ViewModelBase
                 var rule = await _ruleService.GetRuleForExtensionAsync(item.Extension);
                 if (rule is { AutoMove: true, IsEnabled: true } && Directory.Exists(rule.Destination))
                 {
+                    _logger.LogDebug("Auto-move rule found for {Extension}: {Destination}", item.Extension, rule.Destination);
                     autoMoveItems.Add((item, rule));
                     continue;
                 }
             }
             manualItems.Add(item);
         }
+
+        _logger.LogDebug("Auto-move: {AutoCount}, Manual: {ManualCount}", autoMoveItems.Count, manualItems.Count);
 
         // Process auto-move items silently
         if (autoMoveItems.Count > 0)
@@ -117,10 +129,12 @@ public partial class DropZoneViewModel : Base.ViewModelBase
             }
 
             IsPopupOpen = true;
+            _logger.LogDebug("Popup opened for manual selection");
         }
         else
         {
             // All items were auto-moved, reset state
+            _logger.LogDebug("All items auto-moved, resetting state");
             ResetState();
         }
     }
@@ -130,6 +144,8 @@ public partial class DropZoneViewModel : Base.ViewModelBase
     /// </summary>
     private async Task ProcessAutoMoveItemsAsync(List<(DroppedItem Item, FileRule Rule)> items)
     {
+        _logger.LogInformation("Processing {Count} auto-move items", items.Count);
+        
         foreach (var (item, rule) in items)
         {
             try
@@ -145,9 +161,12 @@ public partial class DropZoneViewModel : Base.ViewModelBase
                     operation.ItemName,
                     Path.GetFileName(rule.Destination),
                     () => UndoLastOperationCommand.Execute(null));
+                    
+                _logger.LogInformation("Auto-moved: {ItemName} -> {Destination}", item.Name, rule.Destination);
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Auto-move failed for {ItemName}", item.Name);
                 _notificationService.ShowError($"Auto-move failed: {item.Name}", ex.Message);
             }
         }
@@ -182,6 +201,8 @@ public partial class DropZoneViewModel : Base.ViewModelBase
         if (suggestion == null || DroppedItems.Count == 0)
             return;
 
+        _logger.LogInformation("Moving {Count} items to: {Destination}", DroppedItems.Count, suggestion.FullPath);
+
         IsBusy = true;
         IsPopupOpen = false;
 
@@ -205,6 +226,7 @@ public partial class DropZoneViewModel : Base.ViewModelBase
                 // Save rule if "Remember" is checked (with optional auto-move)
                 if (RememberChoice && !item.IsDirectory && !string.IsNullOrEmpty(item.Extension))
                 {
+                    _logger.LogDebug("Saving rule for {Extension}: AutoMove={AutoMove}", item.Extension, EnableAutoMove);
                     await _ruleService.SaveRuleAsync(item.Extension, suggestion.FullPath, EnableAutoMove);
                 }
 
@@ -213,6 +235,7 @@ public partial class DropZoneViewModel : Base.ViewModelBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Move operation failed");
             _notificationService.ShowError("Move Failed", ex.Message);
         }
         finally
@@ -228,6 +251,8 @@ public partial class DropZoneViewModel : Base.ViewModelBase
     [RelayCommand]
     private async Task BrowseDestinationAsync()
     {
+        _logger.LogDebug("Opening folder browser dialog");
+        
         var dialog = new Microsoft.Win32.OpenFolderDialog
         {
             Title = "Select Destination Folder"
@@ -235,6 +260,8 @@ public partial class DropZoneViewModel : Base.ViewModelBase
 
         if (dialog.ShowDialog() == true)
         {
+            _logger.LogDebug("User selected folder: {Folder}", dialog.FolderName);
+            
             var suggestion = new DestinationSuggestion
             {
                 DisplayName = Path.GetFileName(dialog.FolderName),
@@ -257,16 +284,20 @@ public partial class DropZoneViewModel : Base.ViewModelBase
         if (LastOperation == null || !LastOperation.CanUndo)
             return;
 
+        _logger.LogInformation("Undoing operation for: {ItemName}", LastOperation.ItemName);
+
         try
         {
             var success = await _fileOperationService.UndoMoveAsync(LastOperation);
             if (success)
             {
                 _notificationService.ShowUndoSuccess(LastOperation.ItemName);
+                _logger.LogInformation("Undo successful for: {ItemName}", LastOperation.ItemName);
             }
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Undo failed for: {ItemName}", LastOperation.ItemName);
             _notificationService.ShowError("Undo Failed", ex.Message);
         }
         finally
@@ -281,12 +312,15 @@ public partial class DropZoneViewModel : Base.ViewModelBase
     [RelayCommand]
     private void Cancel()
     {
+        _logger.LogDebug("Operation cancelled by user");
         IsPopupOpen = false;
         ResetState();
     }
 
     private async Task LoadSuggestionsAsync(DroppedItem item)
     {
+        _logger.LogDebug("Loading suggestions for: {ItemName}", item.Name);
+        
         var suggestions = await _suggestionService.GetSuggestionsAsync(item);
         
         Suggestions.Clear();
@@ -295,6 +329,7 @@ public partial class DropZoneViewModel : Base.ViewModelBase
             Suggestions.Add(suggestion);
         }
 
+        _logger.LogDebug("Loaded {Count} suggestions", Suggestions.Count);
         StatusText = $"{item.Name} ({item.Category})";
     }
 

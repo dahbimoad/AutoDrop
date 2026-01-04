@@ -1,5 +1,6 @@
 using AutoDrop.Models;
 using AutoDrop.Services.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace AutoDrop.Services.Implementations;
 
@@ -8,25 +9,40 @@ namespace AutoDrop.Services.Implementations;
 /// </summary>
 public sealed class FileOperationService : IFileOperationService
 {
+    private readonly ILogger<FileOperationService> _logger;
+
+    public FileOperationService(ILogger<FileOperationService> logger)
+    {
+        _logger = logger;
+        _logger.LogDebug("FileOperationService initialized");
+    }
+
     /// <inheritdoc />
     public async Task<MoveOperation> MoveAsync(string sourcePath, string destinationFolder)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationFolder);
 
+        _logger.LogInformation("Moving: {Source} -> {Destination}", sourcePath, destinationFolder);
+
         if (!Exists(sourcePath))
         {
+            _logger.LogError("Source not found: {Source}", sourcePath);
             throw new FileNotFoundException("Source file or folder not found.", sourcePath);
         }
 
         if (!Directory.Exists(destinationFolder))
         {
+            _logger.LogDebug("Creating destination folder: {Destination}", destinationFolder);
             Directory.CreateDirectory(destinationFolder);
         }
 
         var isDirectory = Directory.Exists(sourcePath);
         var itemName = Path.GetFileName(sourcePath);
         var destinationPath = GetUniqueFilePath(destinationFolder, itemName);
+
+        _logger.LogDebug("Move details: IsDirectory={IsDirectory}, ItemName={ItemName}, FinalPath={FinalPath}", 
+            isDirectory, itemName, destinationPath);
 
         await Task.Run(() =>
         {
@@ -39,6 +55,8 @@ public sealed class FileOperationService : IFileOperationService
                 File.Move(sourcePath, destinationPath);
             }
         });
+
+        _logger.LogInformation("Move completed: {ItemName} -> {Destination}", itemName, destinationPath);
 
         return new MoveOperation
         {
@@ -53,14 +71,17 @@ public sealed class FileOperationService : IFileOperationService
     public async Task<bool> UndoMoveAsync(MoveOperation operation)
     {
         ArgumentNullException.ThrowIfNull(operation);
+        _logger.LogInformation("Undoing move: {ItemName}", operation.ItemName);
 
         if (!operation.CanUndo)
         {
+            _logger.LogWarning("Undo not available for: {ItemName}", operation.ItemName);
             return false;
         }
 
         if (!Exists(operation.DestinationPath))
         {
+            _logger.LogWarning("Destination no longer exists for undo: {Path}", operation.DestinationPath);
             return false;
         }
 
@@ -68,6 +89,7 @@ public sealed class FileOperationService : IFileOperationService
         var sourceDirectory = Path.GetDirectoryName(operation.SourcePath);
         if (!string.IsNullOrEmpty(sourceDirectory) && !Directory.Exists(sourceDirectory))
         {
+            _logger.LogDebug("Recreating source directory: {Directory}", sourceDirectory);
             Directory.CreateDirectory(sourceDirectory);
         }
 
@@ -79,6 +101,7 @@ public sealed class FileOperationService : IFileOperationService
             var directory = Path.GetDirectoryName(targetPath) ?? string.Empty;
             var fileName = Path.GetFileName(targetPath);
             targetPath = GetUniqueFilePath(directory, fileName);
+            _logger.LogDebug("Original path occupied, using: {NewPath}", targetPath);
         }
 
         await Task.Run(() =>
@@ -94,6 +117,7 @@ public sealed class FileOperationService : IFileOperationService
         });
 
         operation.CanUndo = false;
+        _logger.LogInformation("Undo completed: {ItemName} restored to {Path}", operation.ItemName, targetPath);
         return true;
     }
 
@@ -125,6 +149,7 @@ public sealed class FileOperationService : IFileOperationService
         }
         while (Exists(destinationPath));
 
+        _logger.LogDebug("Generated unique path: {Path}", destinationPath);
         return destinationPath;
     }
 }

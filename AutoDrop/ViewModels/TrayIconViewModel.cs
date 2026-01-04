@@ -1,6 +1,7 @@
 using AutoDrop.Views.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 using Wpf.Ui;
 
 namespace AutoDrop.ViewModels;
@@ -11,13 +12,16 @@ namespace AutoDrop.ViewModels;
 public partial class TrayIconViewModel : Base.ViewModelBase
 {
     private readonly INavigationService _navigationService;
+    private readonly ILogger<TrayIconViewModel> _logger;
 
     [ObservableProperty]
     private bool _isDropZoneVisible = true;
 
-    public TrayIconViewModel(INavigationService navigationService)
+    public TrayIconViewModel(INavigationService navigationService, ILogger<TrayIconViewModel> logger)
     {
         _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
+        _logger = logger;
+        _logger.LogDebug("TrayIconViewModel initialized");
     }
 
     /// <summary>
@@ -26,6 +30,7 @@ public partial class TrayIconViewModel : Base.ViewModelBase
     [RelayCommand]
     private void ShowDropZone()
     {
+        _logger.LogDebug("ShowDropZone requested");
         IsDropZoneVisible = true;
         OnShowDropZoneRequested?.Invoke();
     }
@@ -36,6 +41,7 @@ public partial class TrayIconViewModel : Base.ViewModelBase
     [RelayCommand]
     private void HideDropZone()
     {
+        _logger.LogDebug("HideDropZone requested");
         IsDropZoneVisible = false;
         OnHideDropZoneRequested?.Invoke();
     }
@@ -60,8 +66,9 @@ public partial class TrayIconViewModel : Base.ViewModelBase
     /// Opens the Rules Manager window.
     /// </summary>
     [RelayCommand]
-    private static void OpenRulesManager()
+    private void OpenRulesManager()
     {
+        _logger.LogDebug("Opening Rules Manager");
         var rulesWindow = App.GetService<RulesManagerWindow>();
         rulesWindow.ShowDialog();
     }
@@ -70,8 +77,9 @@ public partial class TrayIconViewModel : Base.ViewModelBase
     /// Exits the application.
     /// </summary>
     [RelayCommand]
-    private static void Exit()
+    private void Exit()
     {
+        _logger.LogInformation("Application exit requested by user");
         System.Windows.Application.Current.Shutdown();
     }
 

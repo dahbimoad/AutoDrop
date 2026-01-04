@@ -1,6 +1,7 @@
 using AutoDrop.Core.Constants;
 using AutoDrop.Models;
 using AutoDrop.Services.Interfaces;
+using Microsoft.Extensions.Logging;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 
@@ -12,10 +13,13 @@ namespace AutoDrop.Services.Implementations;
 public sealed class NotificationService : INotificationService
 {
     private readonly ISnackbarService _snackbarService;
+    private readonly ILogger<NotificationService> _logger;
 
-    public NotificationService(ISnackbarService snackbarService)
+    public NotificationService(ISnackbarService snackbarService, ILogger<NotificationService> logger)
     {
         _snackbarService = snackbarService ?? throw new ArgumentNullException(nameof(snackbarService));
+        _logger = logger;
+        _logger.LogDebug("NotificationService initialized");
     }
 
     /// <inheritdoc />
@@ -25,6 +29,8 @@ public sealed class NotificationService : INotificationService
 
         var destinationName = Path.GetFileName(Path.GetDirectoryName(operation.DestinationPath) ?? operation.DestinationPath);
         var message = $"Moved {operation.ItemName} → {destinationName}";
+
+        _logger.LogDebug("Showing move success: {Message}", message);
 
         _snackbarService.Show(
             "Success",
@@ -39,6 +45,8 @@ public sealed class NotificationService : INotificationService
     {
         var message = $"Auto-moved {itemName} → {destinationName}";
 
+        _logger.LogDebug("Showing auto-move success: {Message}", message);
+
         _snackbarService.Show(
             "Auto-Move",
             message,
@@ -50,6 +58,8 @@ public sealed class NotificationService : INotificationService
     /// <inheritdoc />
     public void ShowError(string title, string message)
     {
+        _logger.LogDebug("Showing error notification: {Title} - {Message}", title, message);
+        
         _snackbarService.Show(
             title,
             message,
@@ -61,6 +71,8 @@ public sealed class NotificationService : INotificationService
     /// <inheritdoc />
     public void ShowSuccess(string title, string message)
     {
+        _logger.LogDebug("Showing success notification: {Title}", title);
+        
         _snackbarService.Show(
             title,
             message,
@@ -72,6 +84,8 @@ public sealed class NotificationService : INotificationService
     /// <inheritdoc />
     public void ShowInfo(string title, string message)
     {
+        _logger.LogDebug("Showing info notification: {Title}", title);
+        
         _snackbarService.Show(
             title,
             message,
@@ -83,6 +97,8 @@ public sealed class NotificationService : INotificationService
     /// <inheritdoc />
     public void ShowUndoSuccess(string itemName)
     {
+        _logger.LogDebug("Showing undo success for: {ItemName}", itemName);
+        
         _snackbarService.Show(
             "Restored",
             $"{itemName} has been moved back to its original location.",

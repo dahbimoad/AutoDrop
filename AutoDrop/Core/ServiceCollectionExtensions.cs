@@ -3,6 +3,7 @@ using AutoDrop.Services.Interfaces;
 using AutoDrop.ViewModels;
 using AutoDrop.Views.Windows;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Wpf.Ui;
 
 namespace AutoDrop.Core;
@@ -17,6 +18,23 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
+        // Configure logging
+        services.AddLogging(builder =>
+        {
+            builder.SetMinimumLevel(LogLevel.Debug);
+            
+            // Debug output (Visual Studio Output window)
+            builder.AddDebug();
+            
+            // Console output (for development)
+            #if DEBUG
+            builder.AddConsole();
+            builder.AddFilter("AutoDrop", LogLevel.Debug);
+            #else
+            builder.AddFilter("AutoDrop", LogLevel.Warning);
+            #endif
+        });
+
         // Core services (Singleton - shared across app)
         services.AddSingleton<IStorageService, StorageService>();
         services.AddSingleton<IRuleService, RuleService>();

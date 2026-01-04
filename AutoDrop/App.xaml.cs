@@ -1,10 +1,10 @@
-﻿using System.Diagnostics;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Threading;
 using AutoDrop.Core;
 using AutoDrop.Services.Interfaces;
 using AutoDrop.Views.Windows;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace AutoDrop;
 
@@ -14,6 +14,7 @@ namespace AutoDrop;
 public partial class App : Application
 {
     private static readonly ServiceProvider ServiceProvider;
+    private static ILogger<App>? _logger;
 
     static App()
     {
@@ -37,60 +38,44 @@ public partial class App : Application
 
     private void OnStartup(object sender, StartupEventArgs e)
     {
+        _logger = GetService<ILogger<App>>();
+        _logger.LogInformation("========== AutoDrop Starting ==========");
+        
         try
         {
             // Ensure app data folder exists
             var storageService = GetService<IStorageService>();
             storageService.EnsureAppDataFolderExists();
+            _logger.LogDebug("App data folder verified");
 
             // Show main window
             var dropZoneWindow = GetService<DropZoneWindow>();
             dropZoneWindow.Show();
+            _logger.LogInformation("Application started successfully");
         }
         catch (Exception ex)
         {
-            LogError("Startup Error", ex);
+            _logger.LogCritical(ex, "Fatal error during startup");
             throw;
         }
     }
 
     private void OnExit(object sender, ExitEventArgs e)
     {
+        _logger?.LogInformation("========== AutoDrop Shutting Down ==========");
         ServiceProvider.Dispose();
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        LogError("Unhandled Exception", e.Exception);
+        _logger?.LogError(e.Exception, "Unhandled exception caught");
         
         MessageBox.Show(
-            $"An unexpected error occurred:\n\n{e.Exception.Message}\n\nSee console for details.",
+            $"An unexpected error occurred:\n\n{e.Exception.Message}\n\nSee debug output for details.",
             "AutoDrop Error",
             MessageBoxButton.OK,
             MessageBoxImage.Error);
 
         e.Handled = true;
-    }
-
-    private static void LogError(string context, Exception ex)
-    {
-        var message = $"""
-            
-            ========== {context} ==========
-            Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}
-            Message: {ex.Message}
-            Type: {ex.GetType().FullName}
-            
-            Stack Trace:
-            {ex.StackTrace}
-            
-            Inner Exception: {ex.InnerException?.Message ?? "None"}
-            ================================
-            
-            """;
-        
-        Console.Error.WriteLine(message);
-        Debug.WriteLine(message);
-        Trace.WriteLine(message);
     }
 }
