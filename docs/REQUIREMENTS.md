@@ -224,72 +224,710 @@ AutoDrop/
 
 ---
 
-## 7. Out of Scope (NOT in MVP)
+---
 
-| Feature | Reason |
+## 7. Post-MVP Features
+
+### Phase 2: Automation & Safety (v1.1)
+
+| ID | Feature | Priority |
+|----|---------|----------|
+| US-08 | Auto-Move with Rules | 🔴 Critical |
+| US-09 | Enhanced Undo History | 🔴 Critical |
+| US-10 | Smart Auto-Rename | 🔴 Critical |
+| US-11 | Duplicate Detection & Handling | 🟡 High |
+
+### Phase 3: User Control (v1.2)
+
+| ID | Feature | Priority |
+|----|---------|----------|
+| US-12 | Rules Management UI | 🔴 Critical |
+| US-13 | Batch Operations | 🟡 High |
+| US-14 | Custom Folder Organization | 🟡 High |
+| US-15 | Copy Mode (Shift+Drop) | 🟢 Medium |
+
+### Phase 4: Intelligence (v1.3)
+
+| ID | Feature | Priority |
+|----|---------|----------|
+| US-16 | AI-Powered Categorization | 🟡 High |
+
+### Phase 5: Distribution (v2.0)
+
+| ID | Feature | Priority |
+|----|---------|----------|
+| US-17 | Professional Installer (MSI/MSIX) | 🔴 Critical |
+
+---
+
+## 8. Detailed User Stories (Post-MVP)
+
+### US-08: Auto-Move with Rules ⭐
+
+**Story:**  
+As a user, when I drop a file with an existing rule, I want it to move automatically without showing the popup, so I save time on repetitive tasks.
+
+**Acceptance Criteria:**
+- [ ] Check for matching rule before showing popup
+- [ ] If rule exists and `autoMove` is enabled → move silently
+- [ ] Show toast notification: "✓ Auto-moved report.pdf → Documents"
+- [ ] Toast has [Undo] button for 5 seconds
+- [ ] If rule exists but `autoMove` is disabled → show popup as normal
+- [ ] If multiple files with different rules → batch auto-move each
+- [ ] If file has no rule → show suggestion popup
+
+**Rule Format (Enhanced):**
+```json
+{
+  "extension": ".pdf",
+  "destination": "C:\\Users\\Me\\Documents\\Work",
+  "autoMove": true,
+  "createdAt": "2026-01-03T10:30:00Z",
+  "lastUsedAt": "2026-01-03T15:45:00Z",
+  "useCount": 12
+}
+```
+
+**Priority:** 🔴 Critical - Core automation feature  
+
+---
+
+### US-09: Enhanced Undo History ⭐
+
+**Story:**  
+As a user, I want to see a history of my last 20 operations and undo multiple moves at once, so I can recover from mistakes easily.
+
+**Acceptance Criteria:**
+- [ ] Track last 20 operations in memory
+- [ ] Right-click tray icon → "Show History"
+- [ ] History window shows:
+  - Timestamp
+  - File name
+  - Source → Destination
+  - Status (Success/Failed/Undone)
+- [ ] Click any operation → [Undo] button appears
+- [ ] Support bulk undo: Select multiple → "Undo Selected"
+- [ ] Operations persist across app restarts (save to `history.json`)
+- [ ] Clear history option
+
+**Data Structure:**
+```json
+{
+  "history": [
+    {
+      "id": "uuid-here",
+      "timestamp": "2026-01-03T15:45:30Z",
+      "fileName": "report.pdf",
+      "source": "C:\\Users\\Me\\Downloads\\report.pdf",
+      "destination": "C:\\Users\\Me\\Documents\\report.pdf",
+      "operation": "move",
+      "status": "success",
+      "undone": false
+    }
+  ]
+}
+```
+
+**Priority:** 🔴 Critical - Safety feature  
+**Estimated Effort:** 3 days
+
+---
+
+### US-10: Smart Auto-Rename ⭐
+
+**Story:**  
+As a user, when a file already exists at the destination, I want intelligent auto-renaming that preserves my intent, so I never lose files.
+
+**Acceptance Criteria:**
+- [ ] Detect existing file before move
+- [ ] Auto-rename pattern: `filename (1).ext`, `filename (2).ext`, etc.
+- [ ] If file with same content exists (hash check) → offer:
+  - Skip (don't move)
+  - Replace
+  - Keep both (rename)
+- [ ] Show notification: "report.pdf renamed to report (1).pdf"
+- [ ] User preference: "Always auto-rename" vs "Always ask"
+- [ ] Store preference in `settings.json`
+
+**Settings:**
+```json
+{
+  "fileConflictBehavior": "auto-rename",  // "auto-rename", "ask", "skip"
+  "compareFileContents": true,
+  "renamePattern": "{name} ({n}){ext}"
+}
+```
+
+**Priority:** 🔴 Critical - Prevents data loss  
+**Estimated Effort:** 2 days
+
+---
+
+### US-11: Duplicate Detection & Handling
+
+**Story:**  
+As a user, I want the app to detect when I'm moving a duplicate file and give me smart options, so I don't waste disk space.
+
+**Acceptance Criteria:**
+- [ ] On move, check if identical file exists (SHA256 hash)
+- [ ] If duplicate found → show dialog:
+  - "Duplicate detected: report.pdf already exists"
+  - Preview both files (size, date, thumbnail if image)
+  - Options:
+    - **Skip** (don't move, keep original)
+    - **Replace** (delete destination, move new)
+    - **Keep Both** (auto-rename)
+    - **Delete Source** (destination is same, just remove source)
+- [ ] Remember choice per session: "Do this for all duplicates"
+- [ ] Option to enable/disable duplicate checking in settings
+- [ ] Fast hash comparison (only compare hashes, not full file scan)
+
+**Performance:**
+- Only hash files < 100MB by default
+- For large files → compare size + date only
+
+**Priority:** 🟡 High - Quality of life  
+**Estimated Effort:** 3 days
+
+---
+
+### US-12: Rules Management UI ⭐
+
+**Story:**  
+As a user, I want a visual interface to view, edit, enable/disable, and delete my rules, so I don't have to edit JSON files manually.
+
+**Acceptance Criteria:**
+- [ ] New window: "Manage Rules" (accessible from tray menu)
+- [ ] List view showing all rules:
+  - Extension (icon + text)
+  - Destination path
+  - Auto-move toggle (checkbox)
+  - Use count
+  - Last used date
+- [ ] Actions per rule:
+  - **Edit** → change destination (folder picker)
+  - **Toggle Auto-Move** → enable/disable auto-move
+  - **Delete** → remove rule with confirmation
+- [ ] Search/filter rules by extension
+- [ ] Sort by: Extension, Use Count, Last Used, Destination
+- [ ] "Add New Rule" button → manual rule creation
+- [ ] Export/Import rules (JSON file)
+
+**UI Mockup:**
+```
+╔═══════════════════════════════════════════╗
+║  Manage Rules                    [X]      ║
+╠═══════════════════════════════════════════╣
+║  Search: [_________]  [+ Add Rule]        ║
+╠═══════════════════════════════════════════╣
+║ Extension | Destination    | Auto | Used  ║
+║ 📄 .pdf   | C:\...\Work    | ☑   | 47x   ║
+║ 🖼 .png    | C:\...\Desktop | ☐   | 12x   ║
+║ 📦 .zip   | C:\...\Downloads| ☑   | 8x    ║
+║                                           ║
+║  [Edit] [Delete]                          ║
+╚═══════════════════════════════════════════╝
+```
+
+**Priority:** 🔴 Critical - User empowerment  
+**Estimated Effort:** 4 days
+
+---
+
+### US-13: Batch Operations
+
+**Story:**  
+As a user, I want to drop multiple files of different types and have them intelligently organized to their respective destinations in one action.
+
+**Acceptance Criteria:**
+- [ ] Accept multiple files (already supported)
+- [ ] Group files by extension/category
+- [ ] Show summary popup:
+  - "5 PDFs → Documents"
+  - "3 PNGs → Pictures"  
+  - "2 ZIPs → Downloads"
+- [ ] Single [Organize All] button → batch move
+- [ ] Individual checkboxes to customize per category
+- [ ] Progress bar for large batches (>10 files)
+- [ ] Summary notification: "✓ Organized 10 files to 3 folders"
+- [ ] Undo moves entire batch
+
+**Popup Example:**
+```
+╔═══════════════════════════════════════╗
+║  Organize 10 files?                   ║
+╠═══════════════════════════════════════╣
+║  ☑ 5 PDFs      → 📁 Documents         ║
+║  ☑ 3 PNGs      → 📁 Pictures          ║
+║  ☑ 2 ZIPs      → 📁 Downloads         ║
+║                                       ║
+║  [Organize All]  [Customize]          ║
+╚═══════════════════════════════════════╝
+```
+
+**Priority:** 🟡 High - Productivity boost  
+**Estimated Effort:** 3 days
+
+---
+
+### US-14: Custom Folder Organization
+
+**Story:**  
+As a user, I want to define custom categories and destination folders (e.g., "Work", "Personal", "Taxes") so files are organized exactly how I want.
+
+**Acceptance Criteria:**
+- [ ] Settings window → "Custom Folders" tab
+- [ ] User can add custom folders:
+  - Display name: "Work Documents"
+  - Path: `C:\Users\Me\Work`
+  - Icon/color picker
+- [ ] Custom folders appear in suggestions list
+- [ ] Rules can target custom folders
+- [ ] Pin favorite folders to always show in suggestions
+- [ ] Recent destinations (last 5 used) appear at top
+
+**Settings Storage:**
+```json
+{
+  "customFolders": [
+    {
+      "name": "Work Documents",
+      "path": "C:\\Users\\Me\\Work",
+      "icon": "💼",
+      "pinned": true
+    },
+    {
+      "name": "Personal Projects",
+      "path": "D:\\Projects",
+      "icon": "🚀",
+      "pinned": false
+    }
+  ]
+}
+```
+
+**Priority:** 🟡 High - Personalization  
+**Estimated Effort:** 3 days
+
+---
+
+### US-15: Copy Mode (Shift+Drop)
+
+**Story:**  
+As a power user, I want to hold Shift while dropping files to copy instead of move, so I can keep originals while organizing copies.
+
+**Acceptance Criteria:**
+- [ ] Detect Shift key during drop operation
+- [ ] If Shift held → change mode to "Copy"
+- [ ] Visual indicator: "Drop to COPY" (instead of "Drop files here")
+- [ ] Popup shows: "Copy to..." instead of "Move to..."
+- [ ] Notification: "✓ Copied report.pdf → Documents"
+- [ ] Undo operation removes copied file (not original)
+- [ ] Rules still apply in copy mode
+- [ ] Settings option: "Default mode" → Move or Copy
+
+**Keyboard Shortcuts:**
+- **Shift + Drop** → Copy mode
+- **Ctrl + Drop** → Alternative copy mode
+- **Alt + Drop** → Show advanced options
+
+**Priority:** 🟢 Medium - Power user feature  
+**Estimated Effort:** 2 days
+
+---
+
+### US-16: AI-Powered Categorization
+
+**Story:**  
+As a user, I want the app to analyze file content (not just extensions) to suggest better destinations, so invoices go to "Finances" and photos of receipts go to "Receipts".
+
+**Acceptance Criteria:**
+- [ ] Integrate ML model for content analysis
+- [ ] Analyze text files (PDF, DOCX) for keywords:
+  - "Invoice" → suggest Finance folder
+  - "Receipt" → suggest Receipts folder
+  - "Tax" → suggest Taxes folder
+- [ ] Analyze images with OCR:
+  - Receipts → detect dates, amounts
+  - Screenshots → detect context
+- [ ] Show AI confidence level in suggestions
+- [ ] User can enable/disable AI in settings
+- [ ] Privacy: All processing happens locally (no cloud)
+- [ ] Fallback to extension-based if AI fails
+
+**Technology:**
+- **OCR:** Tesseract.NET (local)
+- **Text Analysis:** ML.NET (local classification)
+- **Model:** Custom-trained on document categories
+
+**Settings:**
+```json
+{
+  "aiEnabled": true,
+  "aiConfidenceThreshold": 0.7,
+  "analyzeTextFiles": true,
+  "analyzeImages": true,
+  "ocrLanguage": "en"
+}
+```
+
+**Priority:** 🟡 High - Competitive advantage  
+**Estimated Effort:** 7 days
+
+---
+
+### US-17: Professional Installer (MSI/MSIX) ⭐
+
+**Story:**  
+As an end user, I want a professional installer that makes setup easy and installs updates automatically, so I trust the application quality.
+
+**Acceptance Criteria:**
+
+**MSI Installer:**
+- [ ] WiX Toolset v4 setup project
+- [ ] Install to `Program Files\AutoDrop`
+- [ ] Create Start Menu shortcuts
+- [ ] Create Desktop shortcut (optional)
+- [ ] Add to Windows "Add/Remove Programs"
+- [ ] Uninstaller removes all files + AppData
+- [ ] Silent install option: `/quiet`
+- [ ] License agreement screen
+- [ ] Custom banner/logo
+- [ ] Code signing certificate (DigiCert/Sectigo)
+
+**MSIX Package:**
+- [ ] Modern MSIX packaging for Microsoft Store
+- [ ] Auto-update through Store
+- [ ] Sandboxed installation
+- [ ] Portable settings (synced via Microsoft account)
+
+**Update System:**
+- [ ] Check for updates on startup
+- [ ] Notification: "Update available (v1.2) → Install now"
+- [ ] Download installer in background
+- [ ] Auto-install on next launch (or prompt user)
+- [ ] Release notes display
+- [ ] Update channel: Stable / Beta
+
+**Installer Features:**
+- [ ] Detect .NET 8 Runtime → install if missing
+- [ ] First-run tutorial/onboarding
+- [ ] Analytics opt-in prompt (anonymous usage stats)
+- [ ] Register file associations (optional: .autodrop rule files)
+
+**Distribution:**
+- [ ] Microsoft Store submission
+- [ ] Direct download (website)
+- [ ] Chocolatey package
+- [ ] WinGet package
+
+**Priority:** 🔴 Critical - Professional distribution  
+**Estimated Effort:** 5 days
+
+---
+
+## 9. Development Roadmap
+
+### Phase 1: MVP Foundation (Weeks 1-2) ✅
+- [x] US-01: Floating Drop Zone
+- [x] US-02: Drag & Drop Files/Folders
+- [x] US-03: Suggest Destinations
+- [x] US-04: One-Click Move
+- [x] US-05: Undo via Notification
+- [x] US-06: Remember My Choice
+- [x] US-07: System Tray
+
+**Status:** ✅ Complete
+
+---
+
+### Phase 2: Automation & Safety (Weeks 3-4)
+**Goal:** Make the app intelligent and safe
+
+**Week 3:**
+- [ ] US-08: Auto-Move with Rules (2 days)
+- [ ] US-10: Smart Auto-Rename (2 days)
+- [ ] Testing & bug fixes (1 day)
+
+**Week 4:**
+- [ ] US-09: Enhanced Undo History (3 days)
+- [ ] US-11: Duplicate Detection (2 days)
+
+**Deliverable:** v1.1 - "AutoDrop Pro"
+
+---
+
+### Phase 3: User Control (Weeks 5-6)
+**Goal:** Give users full control over organization
+
+**Week 5:**
+- [ ] US-12: Rules Management UI (4 days)
+- [ ] UI/UX polish (1 day)
+
+**Week 6:**
+- [ ] US-13: Batch Operations (3 days)
+- [ ] US-14: Custom Folder Organization (2 days)
+
+**Deliverable:** v1.2 - "Power User Edition"
+
+---
+
+### Phase 4: Intelligence & Polish (Weeks 7-8)
+**Goal:** Add competitive advantages
+
+**Week 7:**
+- [ ] US-16: AI-Powered Categorization (5 days)
+
+**Week 8:**
+- [ ] US-15: Copy Mode (Shift+Drop) (2 days)
+- [ ] Performance optimization (2 days)
+- [ ] Accessibility improvements (1 day)
+
+**Deliverable:** v1.3 - "Smart Edition"
+
+---
+
+### Phase 5: Commercial Launch (Weeks 9-10)
+**Goal:** Professional distribution & monetization
+
+**Week 9:**
+- [ ] US-17: MSI/MSIX Installer (5 days)
+
+**Week 10:**
+- [ ] Code signing certificate
+- [ ] Microsoft Store submission
+- [ ] Landing page + documentation
+- [ ] Beta testing with 10-20 users
+- [ ] License system integration (Gumroad/Paddle)
+
+**Deliverable:** v2.0 - "Commercial Release"
+
+---
+
+## 10. Technical Enhancements
+
+### Required Infrastructure Changes
+
+**1. Enhanced Models:**
+```csharp
+// FileRule.cs - Add new properties
+public bool AutoMove { get; set; } = false;
+public string Category { get; set; } = "Unknown";
+
+// OperationHistory.cs - New model
+public class OperationHistory
+{
+    public Guid Id { get; set; }
+    public DateTime Timestamp { get; set; }
+    public string FileName { get; set; }
+    public string SourcePath { get; set; }
+    public string DestinationPath { get; set; }
+    public OperationType Type { get; set; } // Move, Copy
+    public OperationStatus Status { get; set; }
+    public bool Undone { get; set; }
+}
+```
+
+**2. New Services:**
+- `IHistoryService` - Track and manage operation history
+- `IDuplicateDetectionService` - Hash comparison and duplicate handling
+- `IAICategorizationService` - ML-powered file analysis
+- `IUpdateService` - Check for updates and auto-install
+
+**3. Storage Files:**
+```
+%AppData%\AutoDrop\
+├── rules.json          # Enhanced with autoMove flag
+├── settings.json       # App preferences
+├── history.json        # Last 20 operations
+├── customFolders.json  # User-defined folders
+└── cache\
+    └── file-hashes.db  # SQLite for duplicate detection
+```
+
+---
+
+## 11. Out of Scope (Future Consideration)
+
+| Feature | Status |
 |---------|--------|
-| ❌ File renaming | Complexity |
-| ❌ Folder watching | Automation later |
-| ❌ AI analysis | Future enhancement |
-| ❌ Rule editor UI | Keep simple |
-| ❌ History screen | Session undo is enough |
-| ❌ Start with Windows | Polish later |
-| ❌ Profiles | Single user for now |
-| ❌ Cloud sync | Local-first |
+| Cloud sync (OneDrive/Dropbox) | v3.0 consideration |
+| Mobile companion app | v3.0 consideration |
+| Folder watching/monitoring | v2.1 feature |
+| Network drive support | v2.1 feature |
+| Team collaboration features | Enterprise edition |
+| Scheduled organization | v2.1 feature |
+| Statistics dashboard | v2.2 feature |
 
 ---
 
-## 8. Development Phases
+## 12. Success Metrics (Commercial Edition)
 
-### Phase 1: Core (Days 1-3)
-- [ ] US-01: Drop Zone window
-- [ ] US-02: Drag & drop handling
-- [ ] US-03: Suggestion popup
-- [ ] US-04: Move file logic
+**v2.0 is successful when:**
+1. ✅ Auto-move works 95%+ of the time for known extensions
+2. ✅ Users can manage rules without touching JSON
+3. ✅ Duplicate detection prevents data loss 100% of time
+4. ✅ Batch operations handle 100+ files smoothly
+5. ✅ AI categorization is 80%+ accurate
+6. ✅ Installer completes in < 2 minutes with zero errors
+7. ✅ App passes Microsoft Store certification
 
-### Phase 2: Safety (Days 4-5)
-- [ ] US-05: Toast notification + Undo
-
-### Phase 3: Intelligence (Days 6-7)
-- [ ] US-06: Remember choice + auto-move
-
-### Phase 4: Polish (Day 8)
-- [ ] US-07: System tray
-- [ ] Bug fixes
-- [ ] Testing
+**Business Metrics:**
+- 1,000 downloads in first month
+- 10% conversion rate (free trial → paid)
+- 4.5+ star rating on Microsoft Store
+- < 1% refund rate
 
 ---
 
-## 9. Success Criteria
+## 13. Risks & Mitigations (Enhanced)
 
-MVP is complete when:
-1. ✅ User can drop a file and move it in 2 clicks
-2. ✅ App suggests correct destination 80% of the time
-3. ✅ User can undo a mistake
-4. ✅ App remembers preferences for next time
-5. ✅ App runs quietly in system tray
-
----
-
-## 10. Risks & Mitigations
-
-| Risk | Mitigation |
-|------|------------|
-| File permission errors | Show clear error message, don't crash |
-| File in use | Detect and notify user |
-| Overwriting files | Auto-rename, never overwrite |
-| Lost files | Undo feature + keep source until confirmed |
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| AI model too slow | High | Async processing + progress indicator |
+| Hash calculation for large files | Medium | Skip files > 100MB, size-only comparison |
+| Rules corruption | High | Validate JSON on load, auto-backup |
+| Update breaks user rules | Critical | Schema versioning + migration logic |
+| Store rejection | Critical | Follow guidelines, thorough testing |
+| Performance with 1000+ rules | Medium | Index rules by extension, use caching |
 
 ---
 
-## Next Steps
+## 14. Priority Matrix
 
-1. ✅ Requirements approved
-2. ⬜ Create project structure
-3. ⬜ Build US-01 (Drop Zone)
-4. ⬜ Build US-02 (Drag & Drop)
-5. ⬜ Continue...
+**Must Have (Critical Path to v2.0):**
+1. US-08: Auto-Move with Rules ⭐
+2. US-09: Enhanced Undo History ⭐
+3. US-10: Smart Auto-Rename ⭐
+4. US-12: Rules Management UI ⭐
+5. US-17: Professional Installer ⭐
+
+**Should Have (Competitive Advantages):**
+6. US-13: Batch Operations
+7. US-14: Custom Folder Organization
+8. US-16: AI-Powered Categorization
+9. US-11: Duplicate Detection
+
+**Nice to Have (Polish):**
+10. US-15: Copy Mode (Shift+Drop)
 
 ---
 
-**Ready to start coding!**
+## 15. Quality Assurance
+
+**Testing Requirements:**
+- [ ] Unit tests: 80%+ code coverage
+- [ ] Integration tests for all file operations
+- [ ] UI automation tests (WPF UI Testing Framework)
+- [ ] Performance tests: 1000+ files batch operation
+- [ ] Security audit: File system access patterns
+- [ ] Accessibility audit: NVDA/Narrator compatibility
+- [ ] Beta testing: 20+ real users for 2 weeks
+
+**Supported Scenarios:**
+- Windows 10 (21H2+) and Windows 11
+- Files: 1 byte to 10 GB
+- Network drives (local mapping)
+- External USB drives
+- OneDrive/Dropbox local folders
+- Multi-monitor setups
+
+---
+
+## 16. Monetization Strategy
+
+**Pricing Model:**
+
+| Edition | Price | Features |
+|---------|-------|----------|
+| **Free** | $0 | Basic drop zone, 5 rules max, manual move only |
+| **Pro** | $9.99 | Unlimited rules, auto-move, undo history, batch ops |
+| **Business** | $29.99 | Pro + AI categorization, priority support, 5 devices |
+
+**Revenue Projections:**
+- Month 1: 1,000 downloads → 100 paid ($1,000)
+- Month 6: 10,000 downloads → 1,500 paid ($15,000)
+- Year 1 Goal: $50,000 revenue
+
+**Marketing Channels:**
+- Microsoft Store (primary)
+- Product Hunt launch
+- Reddit (r/productivity, r/software)
+- YouTube demos (productivity influencers)
+- Landing page with free trial
+
+---
+
+## 17. Next Steps (Action Plan)
+
+### Immediate (Week 3):
+1. ✅ Requirements v2.0 approved
+2. ⬜ Create detailed technical design docs
+3. ⬜ Set up project branches (main, develop, feature/*)
+4. ⬜ Update project board with new user stories
+5. ⬜ Begin US-08: Auto-Move implementation
+
+### Short-term (Weeks 3-6):
+- Complete Phase 2: Automation & Safety
+- Complete Phase 3: User Control
+- Internal testing & bug fixes
+
+### Medium-term (Weeks 7-10):
+- Complete Phase 4: Intelligence
+- Complete Phase 5: Distribution
+- Beta testing program
+- Microsoft Store submission
+
+### Long-term (Months 3-6):
+- Launch v2.0 Commercial
+- Monitor user feedback
+- Plan v2.1 features
+- Scale marketing efforts
+
+---
+
+**🎯 Target: Commercial Launch by March 2026**
+
+---
+
+## Appendix A: Keyboard Shortcuts Reference
+
+| Shortcut | Action |
+|----------|--------|
+| **Shift + Drop** | Copy instead of move |
+| **Ctrl + Drop** | Copy (alternative) |
+| **Alt + Drop** | Show advanced options |
+| **Ctrl + Z** | Undo last operation (global) |
+| **Ctrl + Shift + H** | Show history window |
+| **Ctrl + Shift + R** | Show rules manager |
+| **Ctrl + Shift + D** | Show/hide drop zone |
+| **Esc** | Close popup/dialog |
+
+---
+
+## Appendix B: File Conflict Resolution Logic
+
+```
+File drop detected
+    ↓
+Check destination for existing file
+    ↓
+File exists?
+    ├─ NO → Move/Copy directly
+    └─ YES → Check user preference
+            ├─ Auto-rename → Create filename (1).ext
+            ├─ Ask → Show conflict dialog
+            └─ Skip → Cancel operation
+                    ↓
+            Duplicate detection enabled?
+                ├─ YES → Compare hashes
+                │       ├─ Same hash → "Delete source or skip?"
+                │       └─ Different → "Replace, keep both, or skip?"
+                └─ NO → Skip hash check
+```
+
+---
+
+**Document Status:** ✅ Ready for Implementation  
+**Last Updated:** January 3, 2026  
+**Version Control:** This document is the single source of truth for AutoDrop development.
