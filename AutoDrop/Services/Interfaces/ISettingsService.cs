@@ -48,10 +48,4 @@ public interface ISettingsService
     /// <param name="folderId">The folder ID to remove.</param>
     /// <returns>True if folder was removed.</returns>
     Task<bool> RemoveCustomFolderAsync(Guid folderId);
-
-    /// <summary>
-    /// Updates the usage count for a custom folder.
-    /// </summary>
-    /// <param name="folderId">The folder ID.</param>
-    Task IncrementFolderUsageAsync(Guid folderId);
 }

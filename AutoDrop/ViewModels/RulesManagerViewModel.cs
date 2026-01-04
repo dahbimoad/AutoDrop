@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Windows.Data;
 using AutoDrop.Models;
 using AutoDrop.Services.Interfaces;
@@ -125,11 +126,22 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
     private async Task LoadRulesAsync()
     {
         var rules = await _ruleService.GetAllRulesAsync();
+        var customFolderPaths = (await _settingsService.GetCustomFoldersAsync())
+            .Select(f => NormalizePath(f.Path))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            
         Rules.Clear();
         foreach (var rule in rules.OrderBy(r => r.Extension))
         {
+            // Mark if this rule points to a custom folder
+            rule.IsCustomFolder = customFolderPaths.Contains(NormalizePath(rule.Destination));
             Rules.Add(rule);
         }
+    }
+    
+    private static string NormalizePath(string path)
+    {
+        return path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
     }
 
     private async Task LoadCustomFoldersAsync()
@@ -546,25 +558,64 @@ public partial class RulesManagerViewModel : Base.ViewModelBase
 
     /// <summary>
     /// Changes the path for a custom folder using folder browser.
+    /// The user selects a new parent folder, and the folder name is appended.
+    /// Also updates any rules that point to the old path.
     /// </summary>
     [RelayCommand]
     private async Task ChangeFolderPathAsync(CustomFolder? folder)
     {
         if (folder == null) return;
 
-        var newPath = ShowFolderBrowserDialog(folder.Path);
-        if (string.IsNullOrEmpty(newPath) || newPath == folder.Path)
+        // Current full path is stored in folder.Path
+        var oldFullPath = folder.Path;
+        
+        // Get the parent of the old path as initial directory for the dialog
+        var oldParent = Path.GetDirectoryName(oldFullPath) ?? oldFullPath;
+        
+        // User selects a NEW PARENT folder
+        var newParent = ShowFolderBrowserDialog(oldParent);
+        if (string.IsNullOrEmpty(newParent))
+            return;
+        
+        // Construct the new full path by appending the folder name to the new parent
+        var newFullPath = Path.Combine(newParent, folder.Name);
+        
+        // Skip if nothing changed
+        if (string.Equals(oldFullPath, newFullPath, StringComparison.OrdinalIgnoreCase))
             return;
 
         _logger.LogInformation("Changing folder path: {Name} from {OldPath} to {NewPath}", 
-            folder.Name, folder.Path, newPath);
+            folder.Name, oldFullPath, newFullPath);
 
         IsBusy = true;
         try
         {
-            folder.Path = newPath;
+            // Create the new folder if it doesn't exist
+            if (!Directory.Exists(newFullPath))
+            {
+                Directory.CreateDirectory(newFullPath);
+                _logger.LogDebug("Created new folder: {Path}", newFullPath);
+            }
+
+            // Update the custom folder path
+            folder.Path = newFullPath;
             await _settingsService.UpdateCustomFolderAsync(folder);
-            _notificationService.ShowSuccess("Folder Updated", $"Path for '{folder.Name}' updated.");
+
+            // Also update any rules that point to the old folder path
+            var updatedRulesCount = await _ruleService.UpdateRulesDestinationAsync(oldFullPath, newFullPath);
+            
+            if (updatedRulesCount > 0)
+            {
+                // Refresh the rules list to show updated destinations
+                await LoadRulesAsync();
+                _notificationService.ShowSuccess("Folder Updated", 
+                    $"Path for '{folder.Name}' updated.\n{updatedRulesCount} rule(s) also updated to new path.");
+                _logger.LogInformation("Updated {Count} rules to new destination path", updatedRulesCount);
+            }
+            else
+            {
+                _notificationService.ShowSuccess("Folder Updated", $"Path for '{folder.Name}' updated to:\n{newFullPath}");
+            }
         }
         catch (Exception ex)
         {

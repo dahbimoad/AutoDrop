@@ -41,6 +41,7 @@
                 <Grid Margin="0,12,0,0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
@@ -76,8 +77,41 @@
                         </StackPanel>
                     </Grid>
 
+                    <!-- Legend for folder types -->
+                    <StackPanel Grid.Row="1" 
+                                Orientation="Horizontal" 
+                                HorizontalAlignment="Left"
+                                Margin="0,0,0,8">
+                        <TextBlock Text="Legend:" 
+                                   FontSize="11" 
+                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,10,0"/>
+                        <Border Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                CornerRadius="4"
+                                Padding="6,2"
+                                Margin="0,0,4,0">
+                            <TextBlock Text="📁" FontSize="10"/>
+                        </Border>
+                        <TextBlock Text="Custom folder" 
+                                   FontSize="11" 
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,16,0"/>
+                        <Border Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                                CornerRadius="4"
+                                Padding="6,2"
+                                Margin="0,0,4,0">
+                            <TextBlock Text="💻" FontSize="10"/>
+                        </Border>
+                        <TextBlock Text="System folder" 
+                                   FontSize="11" 
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+
                     <!-- Rules List -->
-                    <Border Grid.Row="1"
+                    <Border Grid.Row="2"
                             Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                             CornerRadius="8"
                             BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
@@ -133,11 +167,37 @@
                                     <DataGridTemplateColumn Header="Destination" Width="*">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding Destination}"
-                                                           TextTrimming="CharacterEllipsis"
-                                                           ToolTip="{Binding Destination}"
-                                                           Margin="8,0"
-                                                           VerticalAlignment="Center"/>
+                                                <StackPanel Orientation="Horizontal" 
+                                                            Margin="8,0"
+                                                            VerticalAlignment="Center"
+                                                            ToolTip="{Binding Destination}">
+                                                    <!-- Custom folder indicator -->
+                                                    <Border Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                                            CornerRadius="4"
+                                                            Padding="4,2"
+                                                            Margin="0,0,8,0"
+                                                            VerticalAlignment="Center"
+                                                            ToolTip="Custom folder (created in Custom Folders tab)"
+                                                            Visibility="{Binding IsCustomFolder, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                        <TextBlock Text="📁" FontSize="10"/>
+                                                    </Border>
+                                                    <!-- System folder indicator -->
+                                                    <Border Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                                                            CornerRadius="4"
+                                                            Padding="4,2"
+                                                            Margin="0,0,8,0"
+                                                            VerticalAlignment="Center"
+                                                            ToolTip="System folder (existing folder on your PC)"
+                                                            Visibility="{Binding IsCustomFolder, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                                                        <TextBlock Text="💻" FontSize="10"/>
+                                                    </Border>
+                                                    <!-- Path display: parent path muted, folder name bold same size -->
+                                                    <TextBlock TextTrimming="CharacterEllipsis" FontSize="12">
+                                                        <Run Text="{Binding Destination, Converter={StaticResource PathParentConverter}, Mode=OneWay}" 
+                                                             Foreground="{DynamicResource TextFillColorTertiaryBrush}"/><Run Text="{Binding Destination, Converter={StaticResource PathFolderNameConverter}, Mode=OneWay}"
+                                                             FontWeight="Bold"/>
+                                                    </TextBlock>
+                                                </StackPanel>
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
                                     </DataGridTemplateColumn>
@@ -206,7 +266,7 @@
                     </Border>
 
                     <!-- Add Rule Panel -->
-                    <Border Grid.Row="2"
+                    <Border Grid.Row="3"
                             Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                             CornerRadius="8"
                             BorderBrush="{DynamicResource AccentFillColorDefaultBrush}"
@@ -340,18 +400,28 @@
 
                                                 <!-- Icon and Name -->
                                                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Icon}"
-                                                               FontSize="20"
-                                                               Margin="0,0,12,0"/>
+                                                    <!-- Custom folder badge - same as in Rules tab -->
+                                                    <Border Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                                            CornerRadius="4"
+                                                            Padding="6,4"
+                                                            Margin="0,0,10,0"
+                                                            VerticalAlignment="Center"
+                                                            ToolTip="Custom folder created by AutoDrop">
+                                                        <TextBlock Text="📁" FontSize="14"/>
+                                                    </Border>
                                                     <StackPanel>
                                                         <TextBlock Text="{Binding Name}"
                                                                    FontWeight="SemiBold"
                                                                    FontSize="14"/>
-                                                        <TextBlock Text="{Binding Path}"
-                                                                   FontSize="11"
-                                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                        <!-- Path display: parent path muted, folder name bold same size -->
+                                                        <TextBlock FontSize="11"
                                                                    TextTrimming="CharacterEllipsis"
-                                                                   MaxWidth="350"/>
+                                                                   MaxWidth="350"
+                                                                   ToolTip="{Binding Path}">
+                                                            <Run Text="{Binding Path, Converter={StaticResource PathParentConverter}, Mode=OneWay}" 
+                                                                 Foreground="{DynamicResource TextFillColorTertiaryBrush}"/><Run Text="{Binding Path, Converter={StaticResource PathFolderNameConverter}, Mode=OneWay}"
+                                                                 FontWeight="Bold"/>
+                                                        </TextBlock>
                                                     </StackPanel>
                                                 </StackPanel>
 
@@ -361,10 +431,6 @@
                                                             HorizontalAlignment="Right"
                                                             VerticalAlignment="Center"
                                                             Margin="16,0">
-                                                    <TextBlock Text="{Binding UseCount, StringFormat=Used {0}x}"
-                                                               FontSize="11"
-                                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                               Margin="0,0,16,0"/>
                                                     <CheckBox Content="Pinned"
                                                               IsChecked="{Binding IsPinned, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                               Checked="OnFolderPinnedChanged"
@@ -490,6 +556,13 @@
                 </Grid>
             </TabItem>
         </TabControl>
+
+        <!-- Snackbar Presenter for notifications - modern minimal style -->
+        <ui:SnackbarPresenter x:Name="SnackbarPresenter"
+                              Grid.RowSpan="2"
+                              VerticalAlignment="Bottom"
+                              HorizontalAlignment="Stretch"
+                              Margin="16,0,16,16"/>
 
         <!-- Loading Overlay -->
         <Border Grid.RowSpan="2"

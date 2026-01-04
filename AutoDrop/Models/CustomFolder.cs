@@ -14,7 +14,6 @@ public sealed class CustomFolder : INotifyPropertyChanged
     private string _path = string.Empty;
     private string _icon = "📁";
     private bool _isPinned;
-    private int _useCount;
 
     /// <summary>
     /// Unique identifier for the folder.
@@ -67,16 +66,6 @@ public sealed class CustomFolder : INotifyPropertyChanged
     /// </summary>
     [JsonPropertyName("createdAt")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-    /// <summary>
-    /// Number of times files were moved to this folder.
-    /// </summary>
-    [JsonPropertyName("useCount")]
-    public int UseCount
-    {
-        get => _useCount;
-        set => SetProperty(ref _useCount, value);
-    }
 
     /// <summary>
     /// Gets the folder name from the path for display purposes.

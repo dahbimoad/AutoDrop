@@ -124,7 +124,7 @@ public sealed class SettingsService : ISettingsService
     public async Task UpdateCustomFolderAsync(CustomFolder folder)
     {
         ArgumentNullException.ThrowIfNull(folder);
-        _logger.LogDebug("Updating custom folder: {Id}", folder.Id);
+        _logger.LogDebug("Updating custom folder: {Id} - New Path: {Path}", folder.Id, folder.Path);
 
         await _lock.WaitAsync();
         try
@@ -138,13 +138,17 @@ public sealed class SettingsService : ISettingsService
                 throw new InvalidOperationException($"Custom folder with ID '{folder.Id}' not found.");
             }
 
+            // Update all properties
+            var oldPath = existing.Path;
             existing.Name = folder.Name;
             existing.Path = folder.Path;
             existing.Icon = folder.Icon;
             existing.IsPinned = folder.IsPinned;
 
+            // Force save to disk
             await SaveSettingsInternalAsync(settings);
-            _logger.LogDebug("Custom folder updated: {Name}", folder.Name);
+            _logger.LogInformation("Custom folder updated: {Name} - Path changed from '{OldPath}' to '{NewPath}'", 
+                folder.Name, oldPath, folder.Path);
         }
         finally
         {
@@ -173,28 +177,6 @@ public sealed class SettingsService : ISettingsService
             await SaveSettingsInternalAsync(settings);
             _logger.LogInformation("Custom folder removed: {Name}", folder.Name);
             return true;
-        }
-        finally
-        {
-            _lock.Release();
-        }
-    }
-
-    /// <inheritdoc />
-    public async Task IncrementFolderUsageAsync(Guid folderId)
-    {
-        await _lock.WaitAsync();
-        try
-        {
-            var settings = await GetSettingsAsync();
-            var folder = settings.CustomFolders.FirstOrDefault(f => f.Id == folderId);
-            
-            if (folder != null)
-            {
-                folder.UseCount++;
-                await SaveSettingsInternalAsync(settings);
-                _logger.LogDebug("Folder usage incremented: {Name} -> {Count}", folder.Name, folder.UseCount);
-            }
         }
         finally
         {
