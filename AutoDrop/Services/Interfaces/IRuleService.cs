@@ -25,8 +25,15 @@ public interface IRuleService
     /// </summary>
     /// <param name="extension">File extension.</param>
     /// <param name="destination">Destination folder path.</param>
+    /// <param name="autoMove">Whether to auto-move without popup.</param>
     /// <returns>The created or updated rule.</returns>
-    Task<FileRule> SaveRuleAsync(string extension, string destination);
+    Task<FileRule> SaveRuleAsync(string extension, string destination, bool autoMove = false);
+
+    /// <summary>
+    /// Updates an existing rule.
+    /// </summary>
+    /// <param name="rule">The rule to update.</param>
+    Task UpdateRuleAsync(FileRule rule);
 
     /// <summary>
     /// Removes a rule for a specific extension.
@@ -40,4 +47,18 @@ public interface IRuleService
     /// </summary>
     /// <param name="extension">File extension.</param>
     Task UpdateRuleUsageAsync(string extension);
+
+    /// <summary>
+    /// Toggles the auto-move setting for a rule.
+    /// </summary>
+    /// <param name="extension">File extension.</param>
+    /// <param name="autoMove">Whether to enable auto-move.</param>
+    Task SetAutoMoveAsync(string extension, bool autoMove);
+
+    /// <summary>
+    /// Toggles the enabled state for a rule.
+    /// </summary>
+    /// <param name="extension">File extension.</param>
+    /// <param name="isEnabled">Whether the rule is enabled.</param>
+    Task SetRuleEnabledAsync(string extension, bool isEnabled);
 }

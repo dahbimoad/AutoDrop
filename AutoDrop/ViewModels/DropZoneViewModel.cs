@@ -32,6 +32,9 @@ public partial class DropZoneViewModel : Base.ViewModelBase
     private bool _rememberChoice;
 
     [ObservableProperty]
+    private bool _enableAutoMove;
+
+    [ObservableProperty]
     private MoveOperation? _lastOperation;
 
     public ObservableCollection<DroppedItem> DroppedItems { get; } = [];
@@ -51,6 +54,7 @@ public partial class DropZoneViewModel : Base.ViewModelBase
 
     /// <summary>
     /// Handles files being dropped onto the drop zone.
+    /// Automatically moves files if an auto-move rule exists.
     /// </summary>
     [RelayCommand]
     private async Task HandleDropAsync(string[] paths)
@@ -67,21 +71,86 @@ public partial class DropZoneViewModel : Base.ViewModelBase
             DroppedItems.Add(item);
         }
 
-        // For single item, show suggestions
-        if (DroppedItems.Count == 1)
+        // Check if ALL items have auto-move rules
+        var autoMoveItems = new List<(DroppedItem Item, FileRule Rule)>();
+        var manualItems = new List<DroppedItem>();
+
+        foreach (var item in DroppedItems)
         {
+            if (!item.IsDirectory && !string.IsNullOrEmpty(item.Extension))
+            {
+                var rule = await _ruleService.GetRuleForExtensionAsync(item.Extension);
+                if (rule is { AutoMove: true, IsEnabled: true } && Directory.Exists(rule.Destination))
+                {
+                    autoMoveItems.Add((item, rule));
+                    continue;
+                }
+            }
+            manualItems.Add(item);
+        }
+
+        // Process auto-move items silently
+        if (autoMoveItems.Count > 0)
+        {
+            await ProcessAutoMoveItemsAsync(autoMoveItems);
+        }
+
+        // If there are items without auto-move rules, show the popup
+        if (manualItems.Count > 0)
+        {
+            DroppedItems.Clear();
+            foreach (var item in manualItems)
+            {
+                DroppedItems.Add(item);
+            }
+
             CurrentItem = DroppedItems[0];
-            await LoadSuggestionsAsync(CurrentItem);
+            
+            if (DroppedItems.Count == 1)
+            {
+                await LoadSuggestionsAsync(CurrentItem);
+            }
+            else
+            {
+                StatusText = $"{DroppedItems.Count} items selected";
+                await LoadSuggestionsAsync(CurrentItem);
+            }
+
+            IsPopupOpen = true;
         }
         else
         {
-            // For multiple items, use the first item's category for suggestions
-            CurrentItem = DroppedItems[0];
-            StatusText = $"{DroppedItems.Count} items selected";
-            await LoadSuggestionsAsync(CurrentItem);
+            // All items were auto-moved, reset state
+            ResetState();
         }
+    }
 
-        IsPopupOpen = true;
+    /// <summary>
+    /// Processes items with auto-move rules silently in the background.
+    /// </summary>
+    private async Task ProcessAutoMoveItemsAsync(List<(DroppedItem Item, FileRule Rule)> items)
+    {
+        foreach (var (item, rule) in items)
+        {
+            try
+            {
+                var operation = await _fileOperationService.MoveAsync(item.FullPath, rule.Destination);
+                LastOperation = operation;
+
+                // Update rule usage statistics
+                await _ruleService.UpdateRuleUsageAsync(item.Extension);
+
+                // Show success notification for auto-move
+                _notificationService.ShowAutoMoveSuccess(
+                    operation.ItemName,
+                    Path.GetFileName(rule.Destination),
+                    () => UndoLastOperationCommand.Execute(null));
+            }
+            catch (Exception ex)
+            {
+                _notificationService.ShowError($"Auto-move failed: {item.Name}", ex.Message);
+            }
+        }
     }
 
     /// <summary>
@@ -133,10 +202,10 @@ public partial class DropZoneViewModel : Base.ViewModelBase
                 var operation = await _fileOperationService.MoveAsync(item.FullPath, suggestion.FullPath);
                 LastOperation = operation;
 
-                // Save rule if "Remember" is checked
+                // Save rule if "Remember" is checked (with optional auto-move)
                 if (RememberChoice && !item.IsDirectory && !string.IsNullOrEmpty(item.Extension))
                 {
-                    await _ruleService.SaveRuleAsync(item.Extension, suggestion.FullPath);
+                    await _ruleService.SaveRuleAsync(item.Extension, suggestion.FullPath, EnableAutoMove);
                 }
 
                 _notificationService.ShowMoveSuccess(operation, () => UndoLastOperationCommand.Execute(null));
@@ -235,6 +304,7 @@ public partial class DropZoneViewModel : Base.ViewModelBase
         Suggestions.Clear();
         CurrentItem = null;
         RememberChoice = false;
+        EnableAutoMove = false;
         IsDragOver = false;
         StatusText = "Drop files here";
     }

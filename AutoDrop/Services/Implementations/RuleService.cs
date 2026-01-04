@@ -31,11 +31,11 @@ public sealed class RuleService : IRuleService
         var config = await GetConfigurationAsync();
         
         return config.Rules.FirstOrDefault(r => 
-            string.Equals(r.Extension, normalizedExtension, StringComparison.OrdinalIgnoreCase));
+            r.IsEnabled && string.Equals(r.Extension, normalizedExtension, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <inheritdoc />
-    public async Task<FileRule> SaveRuleAsync(string extension, string destination)
+    public async Task<FileRule> SaveRuleAsync(string extension, string destination, bool autoMove = false)
     {
         var normalizedExtension = NormalizeExtension(extension);
         
@@ -43,12 +43,12 @@ public sealed class RuleService : IRuleService
         try
         {
             var config = await GetConfigurationAsync();
-            var existingRule = config.Rules.FirstOrDefault(r => 
-                string.Equals(r.Extension, normalizedExtension, StringComparison.OrdinalIgnoreCase));
+            var existingRule = FindRule(config, normalizedExtension);
 
             if (existingRule != null)
             {
                 existingRule.Destination = destination;
+                existingRule.AutoMove = autoMove;
                 existingRule.LastUsedAt = DateTime.UtcNow;
             }
             else
@@ -56,13 +56,40 @@ public sealed class RuleService : IRuleService
                 existingRule = new FileRule
                 {
                     Extension = normalizedExtension,
-                    Destination = destination
+                    Destination = destination,
+                    AutoMove = autoMove
                 };
                 config.Rules.Add(existingRule);
             }
 
             await SaveConfigurationAsync(config);
             return existingRule;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task UpdateRuleAsync(FileRule rule)
+    {
+        ArgumentNullException.ThrowIfNull(rule);
+        
+        await _lock.WaitAsync();
+        try
+        {
+            var config = await GetConfigurationAsync();
+            var existingRule = FindRule(config, rule.Extension);
+
+            if (existingRule == null)
+                throw new InvalidOperationException($"Rule for extension '{rule.Extension}' not found.");
+
+            existingRule.Destination = rule.Destination;
+            existingRule.AutoMove = rule.AutoMove;
+            existingRule.IsEnabled = rule.IsEnabled;
+
+            await SaveConfigurationAsync(config);
         }
         finally
         {
@@ -79,13 +106,10 @@ public sealed class RuleService : IRuleService
         try
         {
             var config = await GetConfigurationAsync();
-            var rule = config.Rules.FirstOrDefault(r => 
-                string.Equals(r.Extension, normalizedExtension, StringComparison.OrdinalIgnoreCase));
+            var rule = FindRule(config, normalizedExtension);
 
             if (rule == null)
-            {
                 return false;
-            }
 
             config.Rules.Remove(rule);
             await SaveConfigurationAsync(config);
@@ -106,8 +130,7 @@ public sealed class RuleService : IRuleService
         try
         {
             var config = await GetConfigurationAsync();
-            var rule = config.Rules.FirstOrDefault(r => 
-                string.Equals(r.Extension, normalizedExtension, StringComparison.OrdinalIgnoreCase));
+            var rule = FindRule(config, normalizedExtension);
 
             if (rule != null)
             {
@@ -122,12 +145,56 @@ public sealed class RuleService : IRuleService
         }
     }
 
+    /// <inheritdoc />
+    public async Task SetAutoMoveAsync(string extension, bool autoMove)
+    {
+        var normalizedExtension = NormalizeExtension(extension);
+        
+        await _lock.WaitAsync();
+        try
+        {
+            var config = await GetConfigurationAsync();
+            var rule = FindRule(config, normalizedExtension);
+
+            if (rule != null)
+            {
+                rule.AutoMove = autoMove;
+                await SaveConfigurationAsync(config);
+            }
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task SetRuleEnabledAsync(string extension, bool isEnabled)
+    {
+        var normalizedExtension = NormalizeExtension(extension);
+        
+        await _lock.WaitAsync();
+        try
+        {
+            var config = await GetConfigurationAsync();
+            var rule = FindRule(config, normalizedExtension);
+
+            if (rule != null)
+            {
+                rule.IsEnabled = isEnabled;
+                await SaveConfigurationAsync(config);
+            }
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
     private async Task<RulesConfiguration> GetConfigurationAsync()
     {
         if (_cachedConfiguration != null)
-        {
             return _cachedConfiguration;
-        }
 
         _cachedConfiguration = await _storageService.ReadJsonAsync<RulesConfiguration>(_storageService.RulesFilePath)
                                ?? new RulesConfiguration();
@@ -141,12 +208,16 @@ public sealed class RuleService : IRuleService
         _cachedConfiguration = config;
     }
 
+    private static FileRule? FindRule(RulesConfiguration config, string normalizedExtension)
+    {
+        return config.Rules.FirstOrDefault(r => 
+            string.Equals(r.Extension, normalizedExtension, StringComparison.OrdinalIgnoreCase));
+    }
+
     private static string NormalizeExtension(string extension)
     {
         if (string.IsNullOrWhiteSpace(extension))
-        {
             throw new ArgumentException("Extension cannot be null or empty.", nameof(extension));
-        }
 
         return extension.StartsWith('.') ? extension.ToLowerInvariant() : $".{extension.ToLowerInvariant()}";
     }

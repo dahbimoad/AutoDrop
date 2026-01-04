@@ -116,6 +116,14 @@ public partial class DropZoneWindow : Window
         Hide();
     }
 
+    private void OnSettingsClick(object sender, RoutedEventArgs e)
+    {
+        // Open Rules Manager window
+        var rulesWindow = App.GetService<RulesManagerWindow>();
+        rulesWindow.Owner = this;
+        rulesWindow.ShowDialog();
+    }
+
     private void OnCloseClick(object sender, RoutedEventArgs e)
     {
         Application.Current.Shutdown();

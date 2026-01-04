@@ -42,24 +42,40 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Close/Minimize Buttons -->
-                <StackPanel Grid.Row="0" 
-                            Orientation="Horizontal" 
-                            HorizontalAlignment="Right"
-                            Margin="4">
-                    <ui:Button Icon="{ui:SymbolIcon Subtract24}"
+                <!-- Action Buttons -->
+                <Grid Grid.Row="0" Margin="4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Settings/Rules Button -->
+                    <ui:Button Grid.Column="0"
+                               Icon="{ui:SymbolIcon Settings24}"
                                Appearance="Transparent"
-                               ToolTip="Minimize to Tray"
-                               Click="OnMinimizeClick"
+                               ToolTip="Manage Rules &amp; Folders"
+                               Click="OnSettingsClick"
                                Padding="4"
                                FontSize="10"/>
-                    <ui:Button Icon="{ui:SymbolIcon Dismiss24}"
-                               Appearance="Transparent"
-                               ToolTip="Close"
-                               Click="OnCloseClick"
-                               Padding="4"
-                               FontSize="10"/>
-                </StackPanel>
+                    
+                    <!-- Close/Minimize Buttons -->
+                    <StackPanel Grid.Column="2" 
+                                Orientation="Horizontal">
+                        <ui:Button Icon="{ui:SymbolIcon Subtract24}"
+                                   Appearance="Transparent"
+                                   ToolTip="Minimize to Tray"
+                                   Click="OnMinimizeClick"
+                                   Padding="4"
+                                   FontSize="10"/>
+                        <ui:Button Icon="{ui:SymbolIcon Dismiss24}"
+                                   Appearance="Transparent"
+                                   ToolTip="Close"
+                                   Click="OnCloseClick"
+                                   Padding="4"
+                                   FontSize="10"/>
+                    </StackPanel>
+                </Grid>
 
                 <!-- Drop Icon and Text -->
                 <StackPanel Grid.Row="1" 
@@ -112,6 +128,7 @@
                     MaxWidth="300">
                 <Grid>
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
@@ -185,6 +202,15 @@
                               IsChecked="{Binding RememberChoice}"
                               FontSize="11"
                               Visibility="{Binding CurrentItem.IsDirectory, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                    
+                    <!-- Auto-Move Checkbox (shown when Remember is checked) -->
+                    <CheckBox Grid.Row="4"
+                              Content="Enable auto-move (skip popup)"
+                              IsChecked="{Binding EnableAutoMove}"
+                              FontSize="11"
+                              Margin="16,4,0,0"
+                              Visibility="{Binding RememberChoice, Converter={StaticResource BoolToVisibilityConverter}}"
+                              ToolTip="When enabled, files with this extension will be moved automatically without showing the popup"/>
                 </Grid>
             </Border>
         </Popup>

@@ -6,15 +6,18 @@ namespace AutoDrop.Services.Implementations;
 
 /// <summary>
 /// Implementation of destination suggestion service.
+/// Provides intelligent destination suggestions including user-defined rules and custom folders.
 /// </summary>
 public sealed class DestinationSuggestionService : IDestinationSuggestionService
 {
     private readonly IRuleService _ruleService;
+    private readonly ISettingsService _settingsService;
     private readonly IReadOnlyDictionary<string, string> _categoryToFolder;
 
-    public DestinationSuggestionService(IRuleService ruleService)
+    public DestinationSuggestionService(IRuleService ruleService, ISettingsService settingsService)
     {
         _ruleService = ruleService ?? throw new ArgumentNullException(nameof(ruleService));
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         
         // Map categories to Windows known folders
         _categoryToFolder = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -37,25 +40,40 @@ public sealed class DestinationSuggestionService : IDestinationSuggestionService
 
         var suggestions = new List<DestinationSuggestion>();
 
-        // Check for user-defined rule first
+        // 1. Add pinned custom folders at top priority
+        await AddCustomFolderSuggestionsAsync(suggestions);
+
+        // 2. Check for user-defined rule
         if (!item.IsDirectory && !string.IsNullOrEmpty(item.Extension))
         {
             var rule = await _ruleService.GetRuleForExtensionAsync(item.Extension);
             if (rule != null && Directory.Exists(rule.Destination))
             {
-                suggestions.Add(new DestinationSuggestion
+                // Check if already added from custom folders
+                if (!suggestions.Any(s => string.Equals(s.FullPath, rule.Destination, StringComparison.OrdinalIgnoreCase)))
                 {
-                    DisplayName = GetFolderDisplayName(rule.Destination),
-                    FullPath = rule.Destination,
-                    IsRecommended = true,
-                    IsFromRule = true,
-                    Confidence = 100,
-                    IconGlyph = GetIconForCategory(item.Category)
-                });
+                    suggestions.Add(new DestinationSuggestion
+                    {
+                        DisplayName = GetFolderDisplayName(rule.Destination),
+                        FullPath = rule.Destination,
+                        IsRecommended = true,
+                        IsFromRule = true,
+                        Confidence = 100,
+                        IconGlyph = GetIconForCategory(item.Category)
+                    });
+                }
+                else
+                {
+                    // Mark existing suggestion as recommended since it matches a rule
+                    var existing = suggestions.First(s => string.Equals(s.FullPath, rule.Destination, StringComparison.OrdinalIgnoreCase));
+                    existing.IsRecommended = true;
+                    existing.IsFromRule = true;
+                    existing.Confidence = 100;
+                }
             }
         }
 
-        // Add category-based default suggestion
+        // 3. Add category-based default suggestion
         var defaultDestination = GetDefaultDestination(item.Category);
         if (!suggestions.Any(s => string.Equals(s.FullPath, defaultDestination, StringComparison.OrdinalIgnoreCase)))
         {
@@ -63,20 +81,59 @@ public sealed class DestinationSuggestionService : IDestinationSuggestionService
             {
                 DisplayName = GetFolderDisplayName(defaultDestination),
                 FullPath = defaultDestination,
-                IsRecommended = !suggestions.Any(),
+                IsRecommended = !suggestions.Any(s => s.IsRecommended),
                 IsFromRule = false,
                 Confidence = 80,
                 IconGlyph = GetIconForCategory(item.Category)
             });
         }
 
-        // Add common alternative destinations
+        // 4. Add common alternative destinations
         AddAlternativeDestinations(suggestions, item.Category);
 
+        // Sort: Recommended first, then by confidence
         return suggestions
+            .OrderByDescending(s => s.IsRecommended)
+            .ThenByDescending(s => s.Confidence)
             .Take(AppConstants.MaxSuggestions)
             .ToList()
             .AsReadOnly();
+    }
+
+    /// <summary>
+    /// Adds custom folders from settings as suggestions.
+    /// Pinned folders appear first with high priority.
+    /// </summary>
+    private async Task AddCustomFolderSuggestionsAsync(List<DestinationSuggestion> suggestions)
+    {
+        try
+        {
+            var settings = await _settingsService.GetSettingsAsync();
+            var customFolders = settings.CustomFolders
+                .Where(f => Directory.Exists(f.Path))
+                .OrderByDescending(f => f.IsPinned)
+                .ThenBy(f => f.Name);
+
+            foreach (var folder in customFolders)
+            {
+                if (suggestions.Count >= AppConstants.MaxSuggestions)
+                    break;
+
+                suggestions.Add(new DestinationSuggestion
+                {
+                    DisplayName = folder.Name,
+                    FullPath = folder.Path,
+                    IsRecommended = folder.IsPinned,
+                    IsFromRule = false,
+                    Confidence = folder.IsPinned ? 95 : 75,
+                    IconGlyph = "\uE838" // FolderFilled icon for custom folders
+                });
+            }
+        }
+        catch
+        {
+            // If settings fail to load, continue without custom folders
+        }
     }
 
     /// <inheritdoc />
