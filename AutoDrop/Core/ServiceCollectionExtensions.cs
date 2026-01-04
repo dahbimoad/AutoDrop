@@ -1,9 +1,11 @@
+using AutoDrop.Core.Constants;
 using AutoDrop.Services.Implementations;
 using AutoDrop.Services.Interfaces;
 using AutoDrop.ViewModels;
 using AutoDrop.Views.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Serilog;
 using Wpf.Ui;
 
 namespace AutoDrop.Core;
@@ -18,22 +20,44 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
-        // Configure logging with file output for production diagnostics
+        // Configure file logging path
+        var logsFolder = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            AppConstants.AppDataFolderName,
+            "Logs");
+        
+        // Ensure logs folder exists
+        Directory.CreateDirectory(logsFolder);
+        
+        var logFilePath = Path.Combine(logsFolder, "autodrop-.log");
+
+        // Configure Serilog for file logging
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Debug()
+            #if DEBUG
+            .MinimumLevel.Debug()
+            #else
+            .MinimumLevel.Information()
+            #endif
+            .WriteTo.File(
+                logFilePath,
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 7, // Keep 7 days of logs
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}",
+                shared: true)
+            .CreateLogger();
+
+        // Configure logging with Serilog + Debug output
         services.AddLogging(builder =>
         {
-            builder.SetMinimumLevel(LogLevel.Debug);
+            builder.ClearProviders();
+            builder.AddSerilog(Log.Logger, dispose: true);
             
-            // Debug output (Visual Studio Output window)
-            builder.AddDebug();
-            
-            // Console output (for development)
             #if DEBUG
-            builder.AddConsole();
-            builder.AddFilter("AutoDrop", LogLevel.Debug);
+            builder.AddDebug();
+            builder.SetMinimumLevel(LogLevel.Debug);
             #else
-            builder.AddFilter("AutoDrop", LogLevel.Information);
-            builder.AddFilter("Microsoft", LogLevel.Warning);
-            builder.AddFilter("System", LogLevel.Warning);
+            builder.SetMinimumLevel(LogLevel.Information);
             #endif
         });
 
