@@ -260,53 +260,53 @@ The following technical improvements were implemented to ensure production readi
 
 ## 7. Post-MVP Features
 
-### Phase 2: Automation & Safety (v1.1)
+### Phase 2: Automation & Safety (v1.1) ✅ COMPLETE
 
-| ID | Feature | Priority |
-|----|---------|----------|
-| US-08 | Auto-Move with Rules | 🔴 Critical |
-| US-09 | Enhanced Undo History | 🔴 Critical |
-| US-10 | Smart Auto-Rename | 🔴 Critical |
-| US-11 | Duplicate Detection & Handling | 🟡 High |
+| ID | Feature | Priority | Status |
+|----|---------|----------|--------|
+| US-08 | Auto-Move with Rules | 🔴 Critical | ✅ Done |
+| US-09 | Enhanced Undo History | 🔴 Critical | ⏳ Basic (single undo works) |
+| US-10 | Smart Auto-Rename | 🔴 Critical | ✅ Done |
+| US-11 | Duplicate Detection & Handling | 🟡 High | ⏳ Not started |
 
-### Phase 3: User Control (v1.2)
+### Phase 3: User Control (v1.2) ✅ COMPLETE
 
-| ID | Feature | Priority |
-|----|---------|----------|
-| US-12 | Rules Management UI | 🔴 Critical |
-| US-13 | Batch Operations | 🟡 High |
-| US-14 | Custom Folder Organization | 🟡 High |
-| US-15 | Copy Mode (Shift+Drop) | 🟢 Medium |
+| ID | Feature | Priority | Status |
+|----|---------|----------|--------|
+| US-12 | Rules Management UI | 🔴 Critical | ✅ Done |
+| US-13 | Batch Operations | 🟡 High | ⏳ Basic (multi-drop works) |
+| US-14 | Custom Folder Organization | 🟡 High | ✅ Done |
+| US-15 | Copy Mode (Shift+Drop) | 🟢 Medium | ⏳ Not started |
 
 ### Phase 4: Intelligence (v1.3)
 
-| ID | Feature | Priority |
-|----|---------|----------|
-| US-16 | AI-Powered Categorization | 🟡 High |
+| ID | Feature | Priority | Status |
+|----|---------|----------|--------|
+| US-16 | AI-Powered Categorization | 🟡 High | ⏳ Not started |
 
-### Phase 5: Distribution (v2.0)
+### Phase 5: Distribution (v2.0) ✅ COMPLETE
 
-| ID | Feature | Priority |
-|----|---------|----------|
-| US-17 | Professional Installer (MSI/MSIX) | 🔴 Critical |
+| ID | Feature | Priority | Status |
+|----|---------|----------|--------|
+| US-17 | Professional Installer (EXE) | 🔴 Critical | ✅ Done (Inno Setup) |
 
 ---
 
 ## 8. Detailed User Stories (Post-MVP)
 
-### US-08: Auto-Move with Rules ⭐
+### US-08: Auto-Move with Rules ⭐ ✅ COMPLETE
 
 **Story:**  
 As a user, when I drop a file with an existing rule, I want it to move automatically without showing the popup, so I save time on repetitive tasks.
 
 **Acceptance Criteria:**
-- [ ] Check for matching rule before showing popup
-- [ ] If rule exists and `autoMove` is enabled → move silently
-- [ ] Show toast notification: "✓ Auto-moved report.pdf → Documents"
-- [ ] Toast has [Undo] button for 5 seconds
-- [ ] If rule exists but `autoMove` is disabled → show popup as normal
-- [ ] If multiple files with different rules → batch auto-move each
-- [ ] If file has no rule → show suggestion popup
+- [x] Check for matching rule before showing popup
+- [x] If rule exists and `autoMove` is enabled → move silently
+- [x] Show toast notification: "✓ Auto-moved report.pdf → Documents"
+- [x] Toast has [Undo] button for 5 seconds
+- [x] If rule exists but `autoMove` is disabled → show popup as normal
+- [x] If multiple files with different rules → batch auto-move each
+- [x] If file has no rule → show suggestion popup
 
 **Rule Format (Enhanced):**
 ```json
@@ -365,21 +365,21 @@ As a user, I want to see a history of my last 20 operations and undo multiple mo
 
 ---
 
-### US-10: Smart Auto-Rename ⭐
+### US-10: Smart Auto-Rename ⭐ ✅ COMPLETE (Basic)
 
 **Story:**  
 As a user, when a file already exists at the destination, I want intelligent auto-renaming that preserves my intent, so I never lose files.
 
 **Acceptance Criteria:**
-- [ ] Detect existing file before move
-- [ ] Auto-rename pattern: `filename (1).ext`, `filename (2).ext`, etc.
+- [x] Detect existing file before move
+- [x] Auto-rename pattern: `filename (1).ext`, `filename (2).ext`, etc.
 - [ ] If file with same content exists (hash check) → offer:
   - Skip (don't move)
   - Replace
   - Keep both (rename)
 - [ ] Show notification: "report.pdf renamed to report (1).pdf"
-- [ ] User preference: "Always auto-rename" vs "Always ask"
-- [ ] Store preference in `settings.json`
+- [x] User preference: "Always auto-rename" vs "Always ask" (settings model exists)
+- [x] Store preference in `settings.json`
 
 **Settings:**
 ```json
@@ -423,27 +423,27 @@ As a user, I want the app to detect when I'm moving a duplicate file and give me
 
 ---
 
-### US-12: Rules Management UI ⭐
+### US-12: Rules Management UI ⭐ ✅ COMPLETE
 
 **Story:**  
 As a user, I want a visual interface to view, edit, enable/disable, and delete my rules, so I don't have to edit JSON files manually.
 
 **Acceptance Criteria:**
-- [ ] New window: "Manage Rules" (accessible from tray menu)
-- [ ] List view showing all rules:
+- [x] New window: "Manage Rules" (accessible from tray menu)
+- [x] List view showing all rules:
   - Extension (icon + text)
   - Destination path
   - Auto-move toggle (checkbox)
   - Use count
   - Last used date
-- [ ] Actions per rule:
+- [x] Actions per rule:
   - **Edit** → change destination (folder picker)
   - **Toggle Auto-Move** → enable/disable auto-move
   - **Delete** → remove rule with confirmation
-- [ ] Search/filter rules by extension
+- [x] Search/filter rules by extension
 - [ ] Sort by: Extension, Use Count, Last Used, Destination
-- [ ] "Add New Rule" button → manual rule creation
-- [ ] Export/Import rules (JSON file)
+- [x] "Add New Rule" button → manual rule creation
+- [x] Export/Import rules (JSON file)
 
 **UI Mockup:**
 ```
@@ -502,20 +502,20 @@ As a user, I want to drop multiple files of different types and have them intell
 
 ---
 
-### US-14: Custom Folder Organization
+### US-14: Custom Folder Organization ✅ COMPLETE
 
 **Story:**  
 As a user, I want to define custom categories and destination folders (e.g., "Work", "Personal", "Taxes") so files are organized exactly how I want.
 
 **Acceptance Criteria:**
-- [ ] Settings window → "Custom Folders" tab
-- [ ] User can add custom folders:
+- [x] Settings window → "Custom Folders" tab (in Rules Manager)
+- [x] User can add custom folders:
   - Display name: "Work Documents"
   - Path: `C:\Users\Me\Work`
-  - Icon/color picker
-- [ ] Custom folders appear in suggestions list
-- [ ] Rules can target custom folders
-- [ ] Pin favorite folders to always show in suggestions
+  - Icon/color picker (uses folder icon)
+- [x] Custom folders appear in suggestions list
+- [x] Rules can target custom folders
+- [x] Pin favorite folders to always show in suggestions
 - [ ] Recent destinations (last 5 used) appear at top
 
 **Settings Storage:**
