@@ -184,7 +184,7 @@ As a user, I want the app to minimize to system tray so it's always available bu
 | Storage | JSON files (rules, config) |
 | Logging | Serilog (file sink with rolling logs) |
 | Notifications | WPF UI Snackbar + Windows Toast |
-| Installer | WiX Toolset v5 (MSI) |
+| Installer | Inno Setup 6 (EXE) |
 
 **Why WPF UI?**
 - ✅ Modern Windows 11 Fluent Design (Mica, Acrylic effects)
@@ -210,7 +210,7 @@ AutoDrop/
 │   ├── Converters/              # XAML converters
 │   └── Resources/               # Styles, icons, themes
 ├── docs/                        # Documentation
-├── installer/                   # WiX installer files
+├── installer/                   # Inno Setup installer files
 └── scripts/                     # Build scripts
 ```
 
@@ -250,10 +250,11 @@ The following technical improvements were implemented to ensure production readi
 - [x] Debug level logging in DEBUG builds, Info level in Release
 
 ### Installer & Distribution
-- [x] **WiX Toolset v5** MSI installer
+- [x] **Inno Setup 6** EXE installer with modern Windows 11 style
 - [x] Per-user installation to `%LocalAppData%\AutoDrop` (no admin required)
-- [x] Self-contained single-file deployment (~137MB MSI)
-- [x] Local build script (`scripts/build-local.ps1`)
+- [x] Self-contained single-file deployment (~75MB EXE)
+- [x] Professional license agreement and wizard branding
+- [x] Local build script (`scripts/build-inno.ps1`)
 
 ---
 
@@ -668,7 +669,7 @@ As an end user, I want a professional installer that makes setup easy and instal
 - [x] US-06: Remember My Choice
 - [x] US-07: System Tray
 - [x] Production hardening (logging, error handling, resource cleanup)
-- [x] MSI installer with WiX Toolset v5
+- [x] Professional EXE installer with Inno Setup 6
 
 **Status:** ✅ Complete - MVP Pre-Released January 4, 2026
 
