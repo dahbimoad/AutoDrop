@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace AutoDrop.Models;
 
 /// <summary>
-/// Represents a group of files with the same category/destination for batch operations.
+/// Represents a group of files with the same extension/destination for batch operations.
 /// </summary>
 public sealed class BatchFileGroup
 {
@@ -11,6 +11,11 @@ public sealed class BatchFileGroup
     /// Category of files in this group (e.g., "Document", "Image").
     /// </summary>
     public string Category { get; init; } = string.Empty;
+
+    /// <summary>
+    /// File extension for this group (e.g., ".png", ".jpg").
+    /// </summary>
+    public string Extension { get; init; } = string.Empty;
 
     /// <summary>
     /// Target destination path for this group.
@@ -43,7 +48,7 @@ public sealed class BatchFileGroup
     public long TotalSize => Items.Sum(i => i.Size);
 
     /// <summary>
-    /// Formatted display text for this group (e.g., "5 PDFs").
+    /// Formatted display text for this group (e.g., "5 PNGs", "3 JPGs").
     /// </summary>
     public string DisplayText
     {
@@ -51,10 +56,16 @@ public sealed class BatchFileGroup
         {
             if (Items.Count == 0) return string.Empty;
             
-            var extension = Items[0].Extension.TrimStart('.').ToUpperInvariant();
+            // Use the Extension property which is set during grouping
+            var ext = Extension.TrimStart('.').ToUpperInvariant();
+            if (string.IsNullOrEmpty(ext) || ext == "FOLDER")
+            {
+                return Items.Count == 1 ? "1 folder" : $"{Items.Count} folders";
+            }
+            
             return Items.Count == 1 
-                ? $"1 {extension}" 
-                : $"{Items.Count} {extension}s";
+                ? $"1 {ext}" 
+                : $"{Items.Count} {ext}s";
         }
     }
 }

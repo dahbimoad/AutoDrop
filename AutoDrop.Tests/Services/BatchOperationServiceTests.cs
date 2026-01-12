@@ -62,17 +62,16 @@ public sealed class BatchOperationServiceTests : IDisposable
         // Arrange
         var filePath = _fixture.CreateFile("test.txt", "content");
         var item = DroppedItem.FromPath(filePath);
-        var destPath = _fixture.CreateSubDirectory("Documents");
-        
-        SetupSuggestionForItem(item, destPath);
 
-        // Act
+        // Act - Now groups by extension only, destination is set by UI
         var result = await _service.GroupItemsByDestinationAsync([item]);
 
         // Assert
         result.Should().HaveCount(1);
         result[0].Items.Should().HaveCount(1);
-        result[0].DestinationPath.Should().Be(destPath);
+        result[0].Extension.Should().Be(".txt");
+        // Destination is now empty - set by user in UI
+        result[0].DestinationPath.Should().BeEmpty();
     }
 
     [Fact]
@@ -89,14 +88,8 @@ public sealed class BatchOperationServiceTests : IDisposable
             DroppedItem.FromPath(file2),
             DroppedItem.FromPath(file3)
         };
-        
-        var destPath = _fixture.CreateSubDirectory("Documents");
-        foreach (var item in items)
-        {
-            SetupSuggestionForItem(item, destPath);
-        }
 
-        // Act
+        // Act - Now groups by extension only
         var result = await _service.GroupItemsByDestinationAsync(items);
 
         // Assert

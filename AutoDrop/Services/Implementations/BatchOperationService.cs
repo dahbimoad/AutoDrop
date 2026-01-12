@@ -47,30 +47,30 @@ public sealed class BatchOperationService : IBatchOperationService
             return Array.Empty<BatchFileGroup>();
         }
 
-        _logger.LogDebug("Grouping {Count} items by destination", itemsList.Count);
+        _logger.LogDebug("Grouping {Count} items by extension", itemsList.Count);
 
+        // Group by EXTENSION only - user will select destination in the UI
         var groups = new Dictionary<string, BatchFileGroup>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var item in itemsList)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            // Get the best destination for this item
-            var destination = await GetBestDestinationAsync(item, cancellationToken).ConfigureAwait(false);
+            // Create group key based on extension only
+            var extension = item.IsDirectory ? "folder" : item.Extension.ToLowerInvariant();
 
-            // Create group key based on destination path
-            var groupKey = destination.FullPath.ToUpperInvariant();
-
-            if (!groups.TryGetValue(groupKey, out var group))
+            if (!groups.TryGetValue(extension, out var group))
             {
                 group = new BatchFileGroup
                 {
                     Category = item.Category,
-                    DestinationPath = destination.FullPath,
-                    DestinationDisplayName = destination.DisplayName,
+                    Extension = extension,
+                    // Destination will be set by user in UI - leave empty for now
+                    DestinationPath = string.Empty,
+                    DestinationDisplayName = string.Empty,
                     Items = []
                 };
-                groups[groupKey] = group;
+                groups[extension] = group;
             }
 
             group.Items.Add(item);
@@ -78,11 +78,12 @@ public sealed class BatchOperationService : IBatchOperationService
 
         var result = groups.Values
             .OrderByDescending(g => g.FileCount)
+            .ThenBy(g => g.Extension)
             .ToList();
 
-        _logger.LogDebug("Created {Count} groups from {Total} items", result.Count, itemsList.Count);
+        _logger.LogDebug("Created {Count} extension groups from {Total} items", result.Count, itemsList.Count);
 
-        return result;
+        return await Task.FromResult(result);
     }
 
     /// <inheritdoc />

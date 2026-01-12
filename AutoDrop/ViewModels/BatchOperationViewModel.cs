@@ -13,6 +13,8 @@ namespace AutoDrop.ViewModels;
 public partial class BatchOperationViewModel : Base.ViewModelBase, IDisposable
 {
     private readonly IBatchOperationService _batchService;
+    private readonly IDestinationSuggestionService _suggestionService;
+    private readonly IRuleService _ruleService;
     private readonly INotificationService _notificationService;
     private readonly IUndoService _undoService;
     private readonly IFileOperationService _fileOperationService;
@@ -69,12 +71,16 @@ public partial class BatchOperationViewModel : Base.ViewModelBase, IDisposable
 
     public BatchOperationViewModel(
         IBatchOperationService batchService,
+        IDestinationSuggestionService suggestionService,
+        IRuleService ruleService,
         INotificationService notificationService,
         IUndoService undoService,
         IFileOperationService fileOperationService,
         ILogger<BatchOperationViewModel> logger)
     {
         _batchService = batchService ?? throw new ArgumentNullException(nameof(batchService));
+        _suggestionService = suggestionService ?? throw new ArgumentNullException(nameof(suggestionService));
+        _ruleService = ruleService ?? throw new ArgumentNullException(nameof(ruleService));
         _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
         _undoService = undoService ?? throw new ArgumentNullException(nameof(undoService));
         _fileOperationService = fileOperationService ?? throw new ArgumentNullException(nameof(fileOperationService));
@@ -120,7 +126,63 @@ public partial class BatchOperationViewModel : Base.ViewModelBase, IDisposable
 
             foreach (var group in groups)
             {
-                Groups.Add(new BatchFileGroupViewModel(group));
+                // Check if this extension has an auto-move rule
+                var rule = await _ruleService.GetRuleForExtensionAsync(group.Extension, cancellationToken);
+                var hasAutoMoveRule = rule is { AutoMove: true, IsEnabled: true };
+                
+                var groupVm = new BatchFileGroupViewModel(group)
+                {
+                    HasAutoMoveRule = hasAutoMoveRule
+                };
+                
+                // Get suggestions for this group's extension
+                // Use the first item in the group as representative
+                if (group.Items.Count > 0)
+                {
+                    var representativeItem = group.Items[0];
+                    var suggestions = await _suggestionService.GetSuggestionsAsync(representativeItem, cancellationToken);
+                    
+                    foreach (var suggestion in suggestions)
+                    {
+                        groupVm.AvailableDestinations.Add(suggestion);
+                    }
+                    
+                    // Set the selected destination:
+                    // - If has auto-move rule, use the rule's destination
+                    // - Otherwise, use the first/recommended suggestion
+                    if (hasAutoMoveRule && rule != null)
+                    {
+                        var ruleDestination = groupVm.AvailableDestinations
+                            .FirstOrDefault(d => string.Equals(d.FullPath, rule.Destination, StringComparison.OrdinalIgnoreCase));
+                        
+                        if (ruleDestination != null)
+                        {
+                            groupVm.SelectedDestination = ruleDestination;
+                        }
+                        else
+                        {
+                            // Add the rule's destination as an option if not in suggestions
+                            var ruleOption = new DestinationSuggestion
+                            {
+                                DisplayName = Path.GetFileName(rule.Destination),
+                                FullPath = rule.Destination,
+                                IsFromRule = true,
+                                IsRecommended = true,
+                                Confidence = 100
+                            };
+                            groupVm.AvailableDestinations.Insert(0, ruleOption);
+                            groupVm.SelectedDestination = ruleOption;
+                        }
+                    }
+                    else
+                    {
+                        // Select the recommended/first suggestion
+                        groupVm.SelectedDestination = groupVm.AvailableDestinations
+                            .FirstOrDefault(d => d.IsRecommended) ?? groupVm.AvailableDestinations.FirstOrDefault();
+                    }
+                }
+
+                Groups.Add(groupVm);
             }
 
             TotalFiles = Groups.Sum(g => g.FileCount);
@@ -143,14 +205,23 @@ public partial class BatchOperationViewModel : Base.ViewModelBase, IDisposable
     {
         if (IsProcessing) return;
 
+        // Build groups with user-selected destinations
         var selectedGroups = Groups
-            .Where(g => g.IsSelected)
-            .Select(g => g.Model)
+            .Where(g => g.IsSelected && g.SelectedDestination != null)
+            .Select(g => new BatchFileGroup
+            {
+                Category = g.Category,
+                Extension = g.Extension,
+                DestinationPath = g.SelectedDestination!.FullPath,
+                DestinationDisplayName = g.SelectedDestination.DisplayName,
+                Items = g.Items.ToList(),
+                IsSelected = true
+            })
             .ToList();
 
         if (selectedGroups.Count == 0)
         {
-            _notificationService.ShowError("No Selection", "Please select at least one group to organize.");
+            _notificationService.ShowError("No Selection", "Please select at least one group with a destination to organize.");
             return;
         }
 
@@ -301,14 +372,28 @@ public partial class BatchFileGroupViewModel : ObservableObject
     [ObservableProperty]
     private bool _isSelected;
 
+    [ObservableProperty]
+    private DestinationSuggestion? _selectedDestination;
+
+    /// <summary>
+    /// Available destination suggestions for this group.
+    /// </summary>
+    public ObservableCollection<DestinationSuggestion> AvailableDestinations { get; } = [];
+
     public BatchFileGroup Model => _model;
     public string Category => _model.Category;
-    public string DestinationPath => _model.DestinationPath;
-    public string DestinationDisplayName => _model.DestinationDisplayName;
+    public string Extension => _model.Extension;
+    public string DestinationPath => SelectedDestination?.FullPath ?? _model.DestinationPath;
+    public string DestinationDisplayName => SelectedDestination?.DisplayName ?? _model.DestinationDisplayName;
     public int FileCount => _model.FileCount;
     public string DisplayText => _model.DisplayText;
     public long TotalSize => _model.TotalSize;
     public IReadOnlyList<DroppedItem> Items => _model.Items;
+    
+    /// <summary>
+    /// Whether this group has an auto-move rule (destination pre-selected).
+    /// </summary>
+    public bool HasAutoMoveRule { get; init; }
 
     public BatchFileGroupViewModel(BatchFileGroup model)
     {
@@ -316,9 +401,59 @@ public partial class BatchFileGroupViewModel : ObservableObject
         _isSelected = model.IsSelected;
     }
 
+    /// <summary>
+    /// Opens a folder browser to let user pick any destination.
+    /// </summary>
+    [RelayCommand]
+    private void Browse()
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = $"Select destination for {Extension} files"
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            // Create a new suggestion for the browsed folder
+            var browsedDestination = new DestinationSuggestion
+            {
+                DisplayName = Path.GetFileName(dialog.FolderName),
+                FullPath = dialog.FolderName,
+                IsRecommended = false,
+                IsFromRule = false,
+                Confidence = 100
+            };
+
+            // Add to available destinations if not already there
+            var existing = AvailableDestinations.FirstOrDefault(d => 
+                string.Equals(d.FullPath, dialog.FolderName, StringComparison.OrdinalIgnoreCase));
+            
+            if (existing == null)
+            {
+                AvailableDestinations.Insert(0, browsedDestination);
+                SelectedDestination = browsedDestination;
+            }
+            else
+            {
+                SelectedDestination = existing;
+            }
+        }
+    }
+
     partial void OnIsSelectedChanged(bool value)
     {
         _model.IsSelected = value;
+    }
+
+    partial void OnSelectedDestinationChanged(DestinationSuggestion? value)
+    {
+        // Update the model's destination when user selects a new one
+        if (value != null)
+        {
+            // We need to update the model - create a method or make the properties settable
+            OnPropertyChanged(nameof(DestinationPath));
+            OnPropertyChanged(nameof(DestinationDisplayName));
+        }
     }
 }
 

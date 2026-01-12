@@ -84,6 +84,10 @@
                                     BorderBrush="{DynamicResource ControlElevationBorderBrush}"
                                     BorderThickness="1">
                                 <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
@@ -91,54 +95,95 @@
                                     </Grid.ColumnDefinitions>
 
                                     <!-- Selection Checkbox -->
-                                    <CheckBox Grid.Column="0"
+                                    <CheckBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
                                               IsChecked="{Binding IsSelected}"
                                               VerticalAlignment="Center"
                                               Margin="0,0,12,0"/>
 
-                                    <!-- Group Info -->
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="{Binding DisplayText}"
-                                                       FontWeight="SemiBold"
-                                                       FontSize="13"
-                                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
-                                            <TextBlock Text="→"
-                                                       Margin="8,0"
-                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                                            <ui:SymbolIcon Symbol="Folder24"
-                                                           FontSize="14"
-                                                           Margin="0,0,4,0"/>
-                                            <TextBlock Text="{Binding DestinationDisplayName}"
-                                                       FontWeight="Medium"
-                                                       FontSize="13"
-                                                       Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       MaxWidth="140"
-                                                       ToolTip="{Binding DestinationPath}"/>
-                                        </StackPanel>
-                                        <TextBlock FontSize="11"
-                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                   Margin="0,2,0,0"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   ToolTip="{Binding DestinationPath}">
-                                            <Run Text="{Binding TotalSize, Converter={StaticResource FileSizeConverter}, Mode=OneWay}"/>
-                                            <Run Text="•"/>
-                                            <Run Text="{Binding Category, Mode=OneWay}"/>
-                                        </TextBlock>
-                                    </StackPanel>
+                                    <!-- Group Info - Top Row -->
+                                    <Grid Grid.Row="0" Grid.Column="1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <TextBlock Grid.Column="0"
+                                                   Text="{Binding DisplayText}"
+                                                   FontWeight="SemiBold"
+                                                   FontSize="13"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="→"
+                                                   Margin="8,0"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                        
+                                        <!-- Destination ComboBox -->
+                                        <ComboBox Grid.Column="2"
+                                                  ItemsSource="{Binding AvailableDestinations}"
+                                                  SelectedItem="{Binding SelectedDestination}"
+                                                  MinWidth="120"
+                                                  FontSize="12"
+                                                  VerticalAlignment="Center"
+                                                  ToolTip="{Binding SelectedDestination.FullPath}">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <ui:SymbolIcon Symbol="Folder24" FontSize="12" Margin="0,0,6,0"/>
+                                                        <TextBlock Text="{Binding DisplayName}"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   MaxWidth="120"/>
+                                                        <TextBlock Text="★" 
+                                                                   Margin="4,0,0,0"
+                                                                   Foreground="Gold"
+                                                                   FontSize="10"
+                                                                   Visibility="{Binding IsFromRule, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                        
+                                        <!-- Browse Button -->
+                                        <ui:Button Grid.Column="3"
+                                                   Icon="{ui:SymbolIcon FolderOpen24}"
+                                                   Appearance="Secondary"
+                                                   ToolTip="Browse for folder..."
+                                                   Command="{Binding BrowseCommand}"
+                                                   Padding="6,4"
+                                                   Margin="6,0,0,0"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
 
                                     <!-- File Count Badge -->
-                                    <Border Grid.Column="2"
+                                    <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="2"
                                             CornerRadius="10"
                                             Background="{DynamicResource AccentFillColorDefaultBrush}"
                                             Padding="10,4"
-                                            VerticalAlignment="Center">
+                                            VerticalAlignment="Center"
+                                            Margin="8,0,0,0">
                                         <TextBlock Text="{Binding FileCount}"
                                                    FontSize="11"
                                                    FontWeight="SemiBold"
                                                    Foreground="White"/>
                                     </Border>
+
+                                    <!-- Info Row - Size, Category, and Full Path -->
+                                    <TextBlock Grid.Row="1" Grid.Column="1"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                               Margin="0,6,0,0"
+                                               TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding SelectedDestination.FullPath}">
+                                        <Run Text="{Binding TotalSize, Converter={StaticResource FileSizeConverter}, Mode=OneWay}"/>
+                                        <Run Text="•"/>
+                                        <Run Text="{Binding Category, Mode=OneWay}"/>
+                                        <Run Text="•"/>
+                                        <Run Text="{Binding SelectedDestination.FullPath, Mode=OneWay}" 
+                                             Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                    </TextBlock>
                                 </Grid>
                             </Border>
                         </DataTemplate>
