@@ -188,7 +188,16 @@ public partial class BatchOperationViewModel : Base.ViewModelBase, IDisposable
             TotalFiles = Groups.Sum(g => g.FileCount);
             TotalGroups = Groups.Count;
 
+            // Subscribe to property changes on each group to update CanExecute
+            foreach (var groupVm in Groups)
+            {
+                groupVm.PropertyChanged += GroupVm_PropertyChanged;
+            }
+
             _logger.LogDebug("Initialized with {Files} files in {Groups} groups", TotalFiles, TotalGroups);
+            
+            // Notify that CanExecute may have changed now that groups are loaded
+            ExecuteCommand.NotifyCanExecuteChanged();
         }
         finally
         {
@@ -297,6 +306,14 @@ public partial class BatchOperationViewModel : Base.ViewModelBase, IDisposable
 
     private bool CanExecute() => !IsProcessing && Groups.Any(g => g.IsSelected);
 
+    private void GroupVm_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(BatchFileGroupViewModel.IsSelected))
+        {
+            ExecuteCommand.NotifyCanExecuteChanged();
+        }
+    }
+
     /// <summary>
     /// Cancels the current operation.
     /// </summary>
@@ -353,6 +370,12 @@ public partial class BatchOperationViewModel : Base.ViewModelBase, IDisposable
     public void Dispose()
     {
         if (_disposed) return;
+
+        // Unsubscribe from property changes
+        foreach (var groupVm in Groups)
+        {
+            groupVm.PropertyChanged -= GroupVm_PropertyChanged;
+        }
 
         _cts?.Cancel();
         _cts?.Dispose();
