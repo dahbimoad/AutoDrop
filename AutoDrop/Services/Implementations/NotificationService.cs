@@ -106,4 +106,17 @@ public sealed class NotificationService : INotificationService
             new SymbolIcon(SymbolRegular.ArrowUndo24),
             TimeSpan.FromMilliseconds(AppConstants.ToastDurationMs));
     }
+
+    /// <inheritdoc />
+    public void ShowWarning(string title, string message)
+    {
+        _logger.LogDebug("Showing warning notification: {Title} - {Message}", title, message);
+        
+        _snackbarService.Show(
+            title,
+            message,
+            ControlAppearance.Caution,
+            new SymbolIcon(SymbolRegular.Warning24),
+            TimeSpan.FromMilliseconds(AppConstants.ToastDurationMs));
+    }
 }

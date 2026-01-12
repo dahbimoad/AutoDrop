@@ -17,8 +17,15 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
     private readonly IRuleService _ruleService;
     private readonly INotificationService _notificationService;
     private readonly IUndoService _undoService;
+    private readonly IDuplicateDetectionService _duplicateDetectionService;
     private readonly ILogger<DropZoneViewModel> _logger;
     private bool _disposed;
+    private DuplicateHandling _currentDuplicateHandling = DuplicateHandling.Ask;
+
+    /// <summary>
+    /// Threshold for showing batch operation dialog.
+    /// </summary>
+    private const int BatchOperationThreshold = 3;
 
     [ObservableProperty]
     private bool _isDragOver;
@@ -57,12 +64,23 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
     public ObservableCollection<DroppedItem> DroppedItems { get; } = [];
     public ObservableCollection<DestinationSuggestion> Suggestions { get; } = [];
 
+    /// <summary>
+    /// Event raised when batch operation dialog should be shown.
+    /// </summary>
+    public event EventHandler<BatchOperationRequestedEventArgs>? BatchOperationRequested;
+
+    /// <summary>
+    /// Event raised when a duplicate file is detected and user input is needed.
+    /// </summary>
+    public event EventHandler<DuplicateHandlingRequestedEventArgs>? DuplicateHandlingRequested;
+
     public DropZoneViewModel(
         IFileOperationService fileOperationService,
         IDestinationSuggestionService suggestionService,
         IRuleService ruleService,
         INotificationService notificationService,
         IUndoService undoService,
+        IDuplicateDetectionService duplicateDetectionService,
         ILogger<DropZoneViewModel> logger)
     {
         _fileOperationService = fileOperationService ?? throw new ArgumentNullException(nameof(fileOperationService));
@@ -70,6 +88,7 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
         _ruleService = ruleService ?? throw new ArgumentNullException(nameof(ruleService));
         _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
         _undoService = undoService ?? throw new ArgumentNullException(nameof(undoService));
+        _duplicateDetectionService = duplicateDetectionService ?? throw new ArgumentNullException(nameof(duplicateDetectionService));
         _logger = logger;
 
         // Subscribe to undo events
@@ -179,9 +198,27 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
             await ProcessAutoMoveItemsAsync(autoMoveItems);
         }
 
-        // If there are items without auto-move rules, show the popup
+        // If there are items without auto-move rules, decide between batch or regular popup
         if (manualItems.Count > 0)
         {
+            // Check if batch operation dialog should be shown
+            if (ShouldShowBatchOperationDialog(manualItems))
+            {
+                _logger.LogInformation("Triggering batch operation dialog for {Count} items", manualItems.Count);
+                var args = new BatchOperationRequestedEventArgs(manualItems);
+                BatchOperationRequested?.Invoke(this, args);
+                
+                if (args.Handled)
+                {
+                    _logger.LogDebug("Batch operation handled by subscriber");
+                    ResetState();
+                    return;
+                }
+                
+                // If not handled, fall through to regular popup
+                _logger.LogDebug("Batch operation not handled, falling back to regular popup");
+            }
+            
             DroppedItems.Clear();
             foreach (var item in manualItems)
             {
@@ -209,6 +246,35 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
             _logger.LogDebug("All items auto-moved, resetting state");
             ResetState();
         }
+    }
+
+    /// <summary>
+    /// Determines whether the batch operation dialog should be shown for the given items.
+    /// Shows batch dialog when there are multiple items with different categories.
+    /// </summary>
+    /// <param name="items">The items to check.</param>
+    /// <returns>True if batch operation dialog should be shown.</returns>
+    private bool ShouldShowBatchOperationDialog(List<DroppedItem> items)
+    {
+        // Show batch dialog when there are enough items
+        if (items.Count < BatchOperationThreshold)
+        {
+            _logger.LogDebug("Item count {Count} below threshold {Threshold}", items.Count, BatchOperationThreshold);
+            return false;
+        }
+
+        // Count unique categories for informational purposes
+        var uniqueCategories = items
+            .Select(i => i.Category)
+            .Distinct()
+            .Count();
+
+        _logger.LogDebug(
+            "Batch dialog check: {ItemCount} items, {CategoryCount} categories - showing batch dialog",
+            items.Count, uniqueCategories);
+
+        // Show batch dialog for 3+ files regardless of category
+        return true;
     }
 
     /// <summary>
@@ -279,10 +345,63 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
         IsBusy = true;
         IsPopupOpen = false;
 
+        // Reset duplicate handling for new batch
+        _currentDuplicateHandling = DuplicateHandling.Ask;
+        var itemsToProcess = DroppedItems.ToList();
+        var skippedCount = 0;
+
         try
         {
-            foreach (var item in DroppedItems)
+            for (var i = 0; i < itemsToProcess.Count; i++)
             {
+                var item = itemsToProcess[i];
+                var hasMoreItems = i < itemsToProcess.Count - 1;
+
+                // Check for duplicates (only for files, not directories)
+                if (!item.IsDirectory && _duplicateDetectionService.IsEnabled)
+                {
+                    var destFilePath = Path.Combine(suggestion.FullPath, item.Name);
+                    
+                    if (File.Exists(destFilePath))
+                    {
+                        var duplicateResult = await _duplicateDetectionService.CheckForDuplicateAsync(
+                            item.FullPath, destFilePath);
+
+                        if (duplicateResult.IsDuplicate)
+                        {
+                            var handling = await HandleDuplicateAsync(duplicateResult, hasMoreItems);
+                            
+                            if (handling == null)
+                            {
+                                // User cancelled
+                                _logger.LogInformation("Move operation cancelled by user");
+                                return;
+                            }
+
+                            switch (handling.Value)
+                            {
+                                case DuplicateHandling.SkipAll:
+                                    _logger.LogDebug("Skipping duplicate: {Item}", item.Name);
+                                    skippedCount++;
+                                    continue;
+
+                                case DuplicateHandling.DeleteSourceAll when duplicateResult.IsExactMatch:
+                                    _logger.LogDebug("Deleting source (exact duplicate): {Item}", item.Name);
+                                    File.Delete(item.FullPath);
+                                    skippedCount++;
+                                    continue;
+
+                                case DuplicateHandling.ReplaceAll:
+                                    _logger.LogDebug("Replacing destination: {Item}", item.Name);
+                                    File.Delete(destFilePath);
+                                    break;
+
+                                // KeepBothAll falls through to normal move (auto-rename)
+                            }
+                        }
+                    }
+                }
+
                 // Check if this extension has an auto-move rule
                 if (!item.IsDirectory)
                 {
@@ -307,6 +426,12 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
 
                 _notificationService.ShowMoveSuccess(operation);
             }
+
+            if (skippedCount > 0)
+            {
+                _notificationService.ShowWarning("Some files skipped", 
+                    $"{skippedCount} duplicate file(s) were skipped.");
+            }
         }
         catch (Exception ex)
         {
@@ -318,6 +443,39 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
             IsBusy = false;
             ResetState();
         }
+    }
+
+    /// <summary>
+    /// Handles a detected duplicate by asking the user or using the remembered choice.
+    /// </summary>
+    private async Task<DuplicateHandling?> HandleDuplicateAsync(DuplicateCheckResult duplicateResult, bool hasMoreDuplicates)
+    {
+        // If we already have a "apply to all" choice, use it
+        if (_currentDuplicateHandling != DuplicateHandling.Ask)
+        {
+            return _currentDuplicateHandling;
+        }
+
+        // Ask the user via event
+        var args = new DuplicateHandlingRequestedEventArgs(duplicateResult, hasMoreDuplicates);
+        
+        await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            DuplicateHandlingRequested?.Invoke(this, args);
+        });
+
+        if (!args.Handled || args.WasCancelled)
+        {
+            return null;
+        }
+
+        // Remember choice if "apply to all" was selected
+        if (args.ApplyToAll)
+        {
+            _currentDuplicateHandling = args.SelectedHandling;
+        }
+
+        return args.SelectedHandling;
     }
 
     /// <summary>
