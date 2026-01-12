@@ -48,14 +48,6 @@ jobs:
       - name: Run Tests
         run: dotnet test AutoDrop.sln --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage"
 
-      - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action/windows@v2
-        if: always()
-        with:
-          files: '**/test-results.trx'
-          check_name: 'Test Results'
-          comment_mode: 'off'
-
       - name: Publish (Self-Contained)
         run: |
           dotnet publish ${{ env.PROJECT_PATH }} `
