@@ -53,6 +53,9 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore ${{ env.PROJECT_PATH }}
 
+      - name: Run Tests
+        run: dotnet test --configuration ${{ env.BUILD_CONFIGURATION }} --verbosity normal
+
       # Build for Windows x64
       - name: Publish Windows x64
         run: |
