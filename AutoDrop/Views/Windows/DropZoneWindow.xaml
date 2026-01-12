@@ -132,8 +132,6 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <!-- Header -->
@@ -202,21 +200,29 @@
                                Command="{Binding BrowseDestinationCommand}"
                                Margin="0,0,0,12"/>
 
-                    <!-- Remember Checkbox -->
-                    <CheckBox Grid.Row="3"
-                              Content="{Binding CurrentItem.Extension, StringFormat='Always move {0} files here'}"
-                              IsChecked="{Binding RememberChoice}"
-                              FontSize="11"
-                              Visibility="{Binding CurrentItem.IsDirectory, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
-                    
-                    <!-- Auto-Move Checkbox (shown when Remember is checked) -->
-                    <CheckBox Grid.Row="4"
-                              Content="Enable auto-move (skip popup)"
-                              IsChecked="{Binding EnableAutoMove}"
-                              FontSize="11"
-                              Margin="16,4,0,0"
-                              Visibility="{Binding RememberChoice, Converter={StaticResource BoolToVisibilityConverter}}"
-                              ToolTip="When enabled, files with this extension will be moved automatically without showing the popup"/>
+                    <!-- Extension Rule Settings - Shows a checkbox for each unique file extension -->
+                    <ItemsControl Grid.Row="3"
+                                  ItemsSource="{Binding ExtensionRuleSettings}"
+                                  Visibility="{Binding HasFilesOnly, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,0,0,4">
+                                    <!-- Remember Checkbox for this extension -->
+                                    <CheckBox Content="{Binding DisplayText}"
+                                              IsChecked="{Binding RememberChoice, Mode=TwoWay}"
+                                              FontSize="11"/>
+                                    
+                                    <!-- Auto-Move Checkbox (shown when Remember is checked) -->
+                                    <CheckBox Content="Enable auto-move (skip popup)"
+                                              IsChecked="{Binding EnableAutoMove, Mode=TwoWay}"
+                                              FontSize="11"
+                                              Margin="16,2,0,0"
+                                              Visibility="{Binding RememberChoice, Converter={StaticResource BoolToVisibilityConverter}}"
+                                              ToolTip="When enabled, files with this extension will be moved automatically without showing the popup"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </Grid>
             </Border>
         </Popup>

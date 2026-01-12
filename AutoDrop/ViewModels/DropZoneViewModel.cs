@@ -40,12 +40,6 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
     private DroppedItem? _currentItem;
 
     [ObservableProperty]
-    private bool _rememberChoice;
-
-    [ObservableProperty]
-    private bool _enableAutoMove;
-
-    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanUndo))]
     [NotifyCanExecuteChangedFor(nameof(UndoCommand))]
     private bool _isUndoAvailable;
@@ -59,10 +53,23 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
     [ObservableProperty]
     private int _undoCount;
 
+    /// <summary>
+    /// Whether the current drop contains only files (no directories).
+    /// Used to show/hide the extension rule settings.
+    /// </summary>
+    [ObservableProperty]
+    private bool _hasFilesOnly;
+
     public bool CanUndo => IsUndoAvailable;
 
     public ObservableCollection<DroppedItem> DroppedItems { get; } = [];
     public ObservableCollection<DestinationSuggestion> Suggestions { get; } = [];
+    
+    /// <summary>
+    /// Collection of extension-specific rule settings for the current drop.
+    /// Each unique extension gets its own checkbox in the UI.
+    /// </summary>
+    public ObservableCollection<ExtensionRuleSetting> ExtensionRuleSettings { get; } = [];
 
     /// <summary>
     /// Event raised when batch operation dialog should be shown.
@@ -226,6 +233,29 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
             }
 
             CurrentItem = DroppedItems[0];
+            
+            // Build extension rule settings for each unique file extension
+            // This allows users to create rules for each extension independently
+            ExtensionRuleSettings.Clear();
+            var extensionGroups = DroppedItems
+                .Where(i => !i.IsDirectory && !string.IsNullOrEmpty(i.Extension))
+                .GroupBy(i => i.Extension.ToLowerInvariant())
+                .ToList();
+            
+            HasFilesOnly = DroppedItems.All(i => !i.IsDirectory);
+            
+            foreach (var group in extensionGroups)
+            {
+                ExtensionRuleSettings.Add(new ExtensionRuleSetting
+                {
+                    Extension = group.Key,
+                    FileCount = group.Count()
+                });
+            }
+            
+            _logger.LogDebug("Created {Count} extension rule settings for extensions: {Extensions}", 
+                ExtensionRuleSettings.Count, 
+                string.Join(", ", ExtensionRuleSettings.Select(e => e.Extension)));
             
             if (DroppedItems.Count == 1)
             {
@@ -417,11 +447,19 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
                 // Register undo operation
                 RegisterUndoForOperation(operation);
 
-                // Save rule if "Remember" is checked (with optional auto-move)
-                if (RememberChoice && !item.IsDirectory && !string.IsNullOrEmpty(item.Extension))
+                // Save rule based on per-extension settings
+                // Each extension has its own checkbox, so we check if the user enabled "Remember" for THIS extension
+                if (!item.IsDirectory && !string.IsNullOrEmpty(item.Extension))
                 {
-                    _logger.LogDebug("Saving rule for {Extension}: AutoMove={AutoMove}", item.Extension, EnableAutoMove);
-                    await _ruleService.SaveRuleAsync(item.Extension, suggestion.FullPath, EnableAutoMove);
+                    var extensionSetting = ExtensionRuleSettings
+                        .FirstOrDefault(e => string.Equals(e.Extension, item.Extension, StringComparison.OrdinalIgnoreCase));
+                    
+                    if (extensionSetting is { RememberChoice: true })
+                    {
+                        _logger.LogDebug("Saving rule for {Extension}: AutoMove={AutoMove}", 
+                            item.Extension, extensionSetting.EnableAutoMove);
+                        await _ruleService.SaveRuleAsync(item.Extension, suggestion.FullPath, extensionSetting.EnableAutoMove);
+                    }
                 }
 
                 _notificationService.ShowMoveSuccess(operation);
@@ -560,9 +598,9 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
     {
         DroppedItems.Clear();
         Suggestions.Clear();
+        ExtensionRuleSettings.Clear();
         CurrentItem = null;
-        RememberChoice = false;
-        EnableAutoMove = false;
+        HasFilesOnly = false;
         IsDragOver = false;
         StatusText = "Drop files here";
     }
