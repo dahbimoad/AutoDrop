@@ -40,19 +40,21 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Restore dependencies
-        run: dotnet restore ${{ env.PROJECT_PATH }}
+        run: dotnet restore AutoDrop.sln
 
       - name: Build
-        run: dotnet build ${{ env.PROJECT_PATH }} --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
+        run: dotnet build AutoDrop.sln --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
 
       - name: Run Tests
-        run: dotnet test --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
+        run: dotnet test AutoDrop.sln --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage"
 
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action/windows@v2
         if: always()
         with:
           files: '**/test-results.trx'
+          check_name: 'Test Results'
+          comment_mode: 'off'
 
       - name: Publish (Self-Contained)
         run: |

@@ -51,10 +51,13 @@ jobs:
         shell: pwsh
 
       - name: Restore dependencies
-        run: dotnet restore ${{ env.PROJECT_PATH }}
+        run: dotnet restore AutoDrop.sln
+
+      - name: Build Solution
+        run: dotnet build AutoDrop.sln --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
 
       - name: Run Tests
-        run: dotnet test --configuration ${{ env.BUILD_CONFIGURATION }} --verbosity normal
+        run: dotnet test AutoDrop.sln --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal
 
       # Build for Windows x64
       - name: Publish Windows x64
