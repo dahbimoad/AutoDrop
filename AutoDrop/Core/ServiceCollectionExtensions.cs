@@ -69,6 +69,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDestinationSuggestionService, DestinationSuggestionService>();
         services.AddSingleton<IUndoService, UndoService>();
         services.AddSingleton<IWindowService, WindowService>();
+        services.AddSingleton<IDuplicateDetectionService, DuplicateDetectionService>();
+        services.AddSingleton<IBatchOperationService, BatchOperationService>();
 
         // WPF UI Services
         services.AddSingleton<ISnackbarService, SnackbarService>();
@@ -79,10 +81,12 @@ public static class ServiceCollectionExtensions
         services.AddTransient<DropZoneViewModel>();
         services.AddTransient<TrayIconViewModel>();
         services.AddTransient<RulesManagerViewModel>();
+        services.AddTransient<BatchOperationViewModel>();
 
         // Windows
         services.AddSingleton<DropZoneWindow>();
         services.AddTransient<RulesManagerWindow>();
+        services.AddTransient<BatchOperationWindow>();
 
         return services;
     }

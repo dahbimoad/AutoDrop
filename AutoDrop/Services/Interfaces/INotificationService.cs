@@ -42,6 +42,13 @@ public interface INotificationService
     void ShowInfo(string title, string message);
 
     /// <summary>
+    /// Shows a warning notification.
+    /// </summary>
+    /// <param name="title">Notification title.</param>
+    /// <param name="message">Warning message.</param>
+    void ShowWarning(string title, string message);
+
+    /// <summary>
     /// Shows a notification that undo was successful.
     /// </summary>
     /// <param name="itemName">Name of the item that was restored.</param>
