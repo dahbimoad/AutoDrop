@@ -1,6 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+# 
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoDrop", "AutoDrop\AutoDrop.csproj", "{23293E6E-BC12-41E9-A27E-4962146E5699}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoDrop.Tests", "AutoDrop.Tests\AutoDrop.Tests.csproj", "{9A7D2513-31AB-4528-A445-60F292441991}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -12,5 +15,9 @@ Global
 		{23293E6E-BC12-41E9-A27E-4962146E5699}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{23293E6E-BC12-41E9-A27E-4962146E5699}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{23293E6E-BC12-41E9-A27E-4962146E5699}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9A7D2513-31AB-4528-A445-60F292441991}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9A7D2513-31AB-4528-A445-60F292441991}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9A7D2513-31AB-4528-A445-60F292441991}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9A7D2513-31AB-4528-A445-60F292441991}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
