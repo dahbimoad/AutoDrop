@@ -1,6 +1,6 @@
 # AutoDrop — Requirements Document
-**Version:** 1.0 MVP (Pre-Released)  
-**Date:** January 4, 2026  
+**Version:** 1.0 MVP (Released)  
+**Date:** January 12, 2026  
 **Author:** Product Team
 
 ---
@@ -255,6 +255,16 @@ The following technical improvements were implemented to ensure production readi
 - [x] Self-contained single-file deployment (~75MB EXE)
 - [x] Professional license agreement and wizard branding
 - [x] Local build script (`scripts/build-inno.ps1`)
+
+### CI/CD Pipeline
+- [x] **GitHub Actions** automated CI/CD
+- [x] **Unit Tests** with xUnit, FluentAssertions, Moq
+- [x] Tests run on every push and pull request
+- [x] Tests run before release builds
+- [x] Automated installer creation on release tags
+
+### Bug Fixes (v1.0.1)
+- [x] **Multi-drop rule creation** - When dropping multiple files with different extensions and checking "Remember", rules are now only saved for the displayed file type (not all extensions)
 
 ---
 
@@ -679,9 +689,9 @@ As an end user, I want a professional installer that makes setup easy and instal
 **Goal:** Make the app intelligent and safe
 
 **Week 3:**
-- [ ] US-08: Auto-Move with Rules (2 days)
-- [ ] US-10: Smart Auto-Rename (2 days)
-- [ ] Testing & bug fixes (1 day)
+- [x] US-08: Auto-Move with Rules (2 days) ✅
+- [x] US-10: Smart Auto-Rename (2 days) ✅
+- [x] Testing & bug fixes (1 day) ✅
 
 **Week 4:**
 - [ ] US-09: Enhanced Undo History (3 days)
@@ -695,12 +705,12 @@ As an end user, I want a professional installer that makes setup easy and instal
 **Goal:** Give users full control over organization
 
 **Week 5:**
-- [ ] US-12: Rules Management UI (4 days)
-- [ ] UI/UX polish (1 day)
+- [x] US-12: Rules Management UI (4 days) ✅
+- [x] UI/UX polish (1 day) ✅
 
 **Week 6:**
 - [ ] US-13: Batch Operations (3 days)
-- [ ] US-14: Custom Folder Organization (2 days)
+- [x] US-14: Custom Folder Organization (2 days) ✅
 
 **Deliverable:** v1.2 - "Power User Edition"
 
@@ -962,6 +972,6 @@ File exists?
 
 ---
 
-**Document Status:** ✅ MVP Pre-Released  
-**Last Updated:** January 4, 2026  
+**Document Status:** ✅ MVP Released  
+**Last Updated:** January 12, 2026  
 **Version Control:** This document is the single source of truth for AutoDrop development.
