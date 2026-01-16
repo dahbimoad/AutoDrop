@@ -7,7 +7,7 @@
 #define MyAppName "AutoDrop"
 #define MyAppVersion GetEnv('APP_VERSION')
 #if MyAppVersion == ""
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.1"
 #endif
 #define MyAppPublisher "Moad Dahbi"
 #define MyAppURL "https://github.com/dahbimoad/AutoDrop"
@@ -102,7 +102,7 @@ FinishedLabel={#MyAppName} has been installed successfully.%n%nDrop files onto t
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Shortcuts:"; Flags: checkedonce
-Name: "startupicon"; Description: "&Start AutoDrop with Windows"; GroupDescription: "Startup:"; Flags: checkedonce
+Name: "startupicon"; Description: "&Start AutoDrop with Windows"; GroupDescription: "Startup:"; Flags: unchecked
 
 [Files]
 ; Main executable
