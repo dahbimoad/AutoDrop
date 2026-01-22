@@ -119,4 +119,20 @@ public sealed class WindowService : IWindowService
 
         return dialog.ShowDialog() == true ? dialog.FileName : null;
     }
+
+    /// <inheritdoc />
+    public void ShowAiSettings()
+    {
+        _logger.LogDebug("Opening AI Settings window");
+        try
+        {
+            var aiSettingsWindow = _serviceProvider.GetRequiredService<AiSettingsWindow>();
+            aiSettingsWindow.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to open AI Settings window");
+            throw;
+        }
+    }
 }

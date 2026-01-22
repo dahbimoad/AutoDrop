@@ -45,4 +45,9 @@ public interface IWindowService
     /// <param name="filter">File filter.</param>
     /// <returns>Selected file path, or null if cancelled.</returns>
     string? ShowOpenFileDialog(string? title = null, string? filter = null);
+
+    /// <summary>
+    /// Opens the AI Settings window as a dialog.
+    /// </summary>
+    void ShowAiSettings();
 }

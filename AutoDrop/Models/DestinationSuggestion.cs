@@ -34,4 +34,9 @@ public sealed class DestinationSuggestion
     /// Confidence score (0-100) for this suggestion.
     /// </summary>
     public int Confidence { get; set; }
+
+    /// <summary>
+    /// Whether this suggestion comes from AI analysis.
+    /// </summary>
+    public bool IsAiSuggestion { get; set; }
 }

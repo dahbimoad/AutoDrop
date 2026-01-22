@@ -18,6 +18,8 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
     private readonly INotificationService _notificationService;
     private readonly IUndoService _undoService;
     private readonly IDuplicateDetectionService _duplicateDetectionService;
+    private readonly IGeminiService _geminiService;
+    private readonly ISettingsService _settingsService;
     private readonly ILogger<DropZoneViewModel> _logger;
     private bool _disposed;
     private DuplicateHandling _currentDuplicateHandling = DuplicateHandling.Ask;
@@ -72,6 +74,18 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
     public ObservableCollection<ExtensionRuleSetting> ExtensionRuleSettings { get; } = [];
 
     /// <summary>
+    /// AI analysis result for the current item (if available).
+    /// </summary>
+    [ObservableProperty]
+    private AiAnalysisResult? _aiAnalysisResult;
+
+    /// <summary>
+    /// Whether AI is currently analyzing the file.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isAiAnalyzing;
+
+    /// <summary>
     /// Event raised when batch operation dialog should be shown.
     /// </summary>
     public event EventHandler<BatchOperationRequestedEventArgs>? BatchOperationRequested;
@@ -88,6 +102,8 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
         INotificationService notificationService,
         IUndoService undoService,
         IDuplicateDetectionService duplicateDetectionService,
+        IGeminiService geminiService,
+        ISettingsService settingsService,
         ILogger<DropZoneViewModel> logger)
     {
         _fileOperationService = fileOperationService ?? throw new ArgumentNullException(nameof(fileOperationService));
@@ -96,6 +112,8 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
         _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
         _undoService = undoService ?? throw new ArgumentNullException(nameof(undoService));
         _duplicateDetectionService = duplicateDetectionService ?? throw new ArgumentNullException(nameof(duplicateDetectionService));
+        _geminiService = geminiService ?? throw new ArgumentNullException(nameof(geminiService));
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _logger = logger;
 
         // Subscribe to undo events
@@ -582,6 +600,7 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
     {
         _logger.LogDebug("Loading suggestions for: {ItemName}", item.Name);
         
+        // Load regular suggestions first
         var suggestions = await _suggestionService.GetSuggestionsAsync(item);
         
         Suggestions.Clear();
@@ -592,6 +611,89 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
 
         _logger.LogDebug("Loaded {Count} suggestions", Suggestions.Count);
         StatusText = $"{item.Name} ({item.Category})";
+
+        // Run AI analysis in parallel (non-blocking)
+        _ = RunAiAnalysisAsync(item);
+    }
+
+    /// <summary>
+    /// Runs AI analysis on the dropped item and adds AI-based suggestions.
+    /// </summary>
+    private async Task RunAiAnalysisAsync(DroppedItem item)
+    {
+        try
+        {
+            // Check if AI is enabled
+            var settings = await _settingsService.GetSettingsAsync();
+            if (!settings.AiSettings.IsFullyConfigured)
+            {
+                _logger.LogDebug("[AI] AI not configured, skipping analysis");
+                return;
+            }
+
+            // Only analyze files, not directories
+            if (item.IsDirectory)
+            {
+                _logger.LogDebug("[AI] Skipping AI analysis for directory");
+                return;
+            }
+
+            IsAiAnalyzing = true;
+            AiAnalysisResult = null;
+            
+            _logger.LogInformation("[AI] 🚀 Starting AI analysis for: {Name}", item.Name);
+            
+            var result = await _geminiService.AnalyzeFileAsync(item.FullPath);
+            
+            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                AiAnalysisResult = result;
+                IsAiAnalyzing = false;
+                
+                if (result.Success)
+                {
+                    // Update status with AI info
+                    var aiInfo = result.SuggestedName != null 
+                        ? $"✨ AI: {result.Category} • Rename: {result.SuggestedName}" 
+                        : $"✨ AI: {result.Category}";
+                    StatusText = aiInfo;
+                    
+                    // Add AI-suggested folder at the top of suggestions if we have a category
+                    if (!string.IsNullOrEmpty(result.Category) && result.Confidence >= settings.AiSettings.ConfidenceThreshold)
+                    {
+                        // Create a folder suggestion based on AI category
+                        var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                        var aiSuggestedPath = Path.Combine(desktopPath, result.Category);
+                        
+                        // Check if this folder exists or can be created
+                        var aiSuggestion = new DestinationSuggestion
+                        {
+                            DisplayName = $"✨ {result.Category}",
+                            FullPath = aiSuggestedPath,
+                            IsRecommended = true,
+                            IsFromRule = false,
+                            Confidence = (int)(result.Confidence * 100),
+                            IsAiSuggestion = true
+                        };
+                        
+                        // Insert AI suggestion at the top
+                        Suggestions.Insert(0, aiSuggestion);
+                        
+                        _logger.LogInformation("[AI] ✅ Added AI suggestion: {Category} (Confidence: {Confidence:P0})", 
+                            result.Category, result.Confidence);
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("[AI] Analysis failed: {Error}", result.Error);
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[AI] Error during AI analysis");
+            IsAiAnalyzing = false;
+        }
     }
 
     private void ResetState()
@@ -602,6 +704,8 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
         CurrentItem = null;
         HasFilesOnly = false;
         IsDragOver = false;
+        IsAiAnalyzing = false;
+        AiAnalysisResult = null;
         StatusText = "Drop files here";
     }
 

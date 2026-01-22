@@ -212,6 +212,14 @@ public partial class DropZoneWindow : Window
         rulesWindow.ShowDialog();
     }
 
+    private void OnAiSettingsClick(object sender, RoutedEventArgs e)
+    {
+        // Open AI Settings window
+        var aiSettingsWindow = App.GetService<AiSettingsWindow>();
+        aiSettingsWindow.Owner = this;
+        aiSettingsWindow.ShowDialog();
+    }
+
     private void OnCloseClick(object sender, RoutedEventArgs e)
     {
         Application.Current.Shutdown();

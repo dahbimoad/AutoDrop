@@ -5,6 +5,7 @@
     <!-- Converters -->
     <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
     <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+    <converters:InverseBoolConverter x:Key="InverseBoolConverter"/>
     <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
     <converters:InverseCountToVisibilityConverter x:Key="InverseCountToVisibilityConverter"/>
     <converters:PathParentConverter x:Key="PathParentConverter"/>
