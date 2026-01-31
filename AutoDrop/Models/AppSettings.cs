@@ -64,12 +64,6 @@ public sealed class AppSettings
     public OperationMode DefaultOperationMode { get; set; } = OperationMode.Move;
 
     /// <summary>
-    /// Whether to start with Windows.
-    /// </summary>
-    [JsonPropertyName("startWithWindows")]
-    public bool StartWithWindows { get; set; }
-
-    /// <summary>
     /// Whether to minimize to tray on close.
     /// </summary>
     [JsonPropertyName("minimizeToTrayOnClose")]

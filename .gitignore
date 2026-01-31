@@ -484,6 +484,9 @@ $RECYCLE.BIN/
 # Vim temporary swap files
 *.swp
 #Personal 
-AI/
+m-AI/
 *.wixpdb
 output/
+
+.github/*
+!.github/workflows/

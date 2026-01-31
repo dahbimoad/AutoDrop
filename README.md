@@ -57,7 +57,6 @@ Download the latest installer from the [Releases](https://github.com/dahbimoad/A
 **Installer includes:**
 - ✅ Desktop shortcut
 - ✅ Start menu entry  
-- ✅ Optional auto-start with Windows
 - ✅ Proper uninstaller (Add/Remove Programs)
 
 ### Portable Version
@@ -101,7 +100,6 @@ Access settings by right-clicking the system tray icon → **Settings**
 
 - **Custom Folders** — Add your own destination folders
 - **File Rules** — Create rules based on extension, name pattern, or size
-- **Startup** — Toggle "Start with Windows"
 - **Appearance** — Adjust drop zone size and position
 
 ---

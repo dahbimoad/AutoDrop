@@ -102,7 +102,6 @@ FinishedLabel={#MyAppName} has been installed successfully.%n%nDrop files onto t
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Shortcuts:"; Flags: checkedonce
-Name: "startupicon"; Description: "&Start AutoDrop with Windows"; GroupDescription: "Startup:"; Flags: unchecked
 
 [Files]
 ; Main executable
@@ -113,8 +112,6 @@ Source: "..\publish\win-x64\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignorever
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Comment: "{#MyAppDescription}"
 ; Desktop shortcut (optional)
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; Comment: "{#MyAppDescription}"
-; Windows Startup (optional)
-Name: "{userstartup}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--minimized"; Tasks: startupicon
 
 [Registry]
 ; Store app info in registry for detection by other tools
