@@ -74,8 +74,8 @@ CreateUninstallRegKey=yes
 
 ; ---- Branding ----
 SetupIconFile=..\AutoDrop\Assets\app.ico
-WizardImageFile=wizard-large.bmp
-WizardSmallImageFile=wizard-small.bmp
+WizardImageFile=large.png
+WizardSmallImageFile=small.png
 
 ; ---- Upgrade Behavior ----
 UsePreviousAppDir=yes
