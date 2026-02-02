@@ -1,39 +1,35 @@
-using System.Windows;
 using AutoDrop.ViewModels;
 using Wpf.Ui.Controls;
 
 namespace AutoDrop.Views.Windows;
 
 /// <summary>
-/// AI Settings window for configuring Gemini API integration.
+/// AI Settings window for configuring multi-provider AI integration.
 /// </summary>
 public partial class AiSettingsWindow : FluentWindow
 {
     private readonly AiSettingsViewModel _viewModel;
-
+    
     public AiSettingsWindow(AiSettingsViewModel viewModel)
     {
-        _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
-        DataContext = _viewModel;
-        
         InitializeComponent();
+        _viewModel = viewModel;
+        DataContext = viewModel;
         
-        Loaded += OnLoaded;
+        // Load settings when window opens
+        Loaded += async (_, _) => await _viewModel.LoadSettingsAsync();
     }
 
-    private async void OnLoaded(object sender, RoutedEventArgs e)
-    {
-        await _viewModel.LoadSettingsAsync();
-    }
-
-    private void OnCancelClick(object sender, RoutedEventArgs e)
+    private void OnCancelClick(object sender, System.Windows.RoutedEventArgs e)
     {
         DialogResult = false;
         Close();
     }
 
-    private void OnSaveClick(object sender, RoutedEventArgs e)
+    private async void OnSaveClick(object sender, System.Windows.RoutedEventArgs e)
     {
+        // CRITICAL: Wait for async save to complete before closing
+        await _viewModel.SaveSettingsCommand.ExecuteAsync(null);
         DialogResult = true;
         Close();
     }

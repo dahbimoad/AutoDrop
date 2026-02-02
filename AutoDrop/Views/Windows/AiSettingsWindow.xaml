@@ -6,11 +6,11 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:viewmodels="clr-namespace:AutoDrop.ViewModels"
                  mc:Ignorable="d"
-                 Title="AI Settings"
-                 Width="550"
-                 Height="650"
-                 MinWidth="500"
-                 MinHeight="550"
+                 Title="AI Integration"
+                 Width="650"
+                 Height="750"
+                 MinWidth="600"
+                 MinHeight="650"
                  WindowStartupLocation="CenterOwner"
                  ExtendsContentIntoTitleBar="True"
                  d:DataContext="{d:DesignInstance viewmodels:AiSettingsViewModel, IsDesignTimeCreatable=False}">
@@ -22,254 +22,406 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Title Bar -->
-        <ui:TitleBar Grid.Row="0" Title="AI Settings - Gemini Integration"/>
+        <ui:TitleBar Grid.Row="0" Title="AI Integration - Multi-Provider"/>
 
-        <!-- Main Content -->
-        <ScrollViewer Grid.Row="1" 
-                      VerticalScrollBarVisibility="Auto"
-                      Padding="24,16">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24,16">
             <StackPanel>
                 
-                <!-- AI Feature Toggle -->
-                <ui:CardControl Margin="0,0,0,16">
+                <!-- Privacy Notice - MUST ACCEPT BEFORE ENABLING -->
+                <Border Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+                        CornerRadius="8" Padding="16" Margin="0,0,0,16"
+                        Visibility="{Binding ShowPrivacyNotice, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <ui:SymbolIcon Symbol="ShieldKeyhole24" Foreground="{DynamicResource SystemFillColorCautionBrush}" Margin="0,0,8,0"/>
+                            <TextBlock Text="Privacy Notice - Required to Enable AI" FontWeight="Bold" FontSize="14"/>
+                        </StackPanel>
+                        <TextBlock TextWrapping="Wrap" Margin="0,0,0,8" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                            AI features analyze file content to help categorize and organize your files. Please review how your data is handled:
+                        </TextBlock>
+                        <StackPanel Margin="12,0,0,12">
+                            <TextBlock TextWrapping="Wrap" Margin="0,0,0,4" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                <Run FontWeight="SemiBold" Text="• Cloud Providers"/><Run Text=" (OpenAI, Claude, Gemini, Groq): File content, file names, and your custom folder names/paths are sent to external AI services for smart categorization. Data handling follows each provider's privacy policy."/>
+                            </TextBlock>
+                            <TextBlock TextWrapping="Wrap" Margin="0,0,0,4" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                <Run FontWeight="SemiBold" Text="• Data Sent"/><Run Text=": File content (images/documents), file names, and names of your custom folders to match files appropriately."/>
+                            </TextBlock>
+                            <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                <Run FontWeight="SemiBold" Text="• Local Provider"/><Run Text=" (Ollama): 100% private - all processing happens on your machine. No data is transmitted externally."/>
+                            </TextBlock>
+                        </StackPanel>
+                        <ui:Button Appearance="Primary" Command="{Binding AcceptDisclaimerCommand}" HorizontalAlignment="Left">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="Checkmark24" Margin="0,0,8,0"/>
+                                <TextBlock Text="Accept &amp; Enable AI Features"/>
+                            </StackPanel>
+                        </ui:Button>
+                    </StackPanel>
+                </Border>
+
+                <!-- Master Toggle - Only shown after accepting terms -->
+                <ui:CardControl Margin="0,0,0,16" Visibility="{Binding ShowAcceptedBadge, Converter={StaticResource BoolToVisibilityConverter}}">
                     <ui:CardControl.Header>
                         <Grid>
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="Enable AI Features" 
-                                           FontWeight="SemiBold"
-                                           FontSize="14"/>
-                                <TextBlock Text="Use Google Gemini to analyze and categorize files automatically"
-                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           FontSize="12"
-                                           TextWrapping="Wrap"/>
+                            <ui:SymbolIcon Grid.Column="0" Symbol="Bot24" FontSize="24" Margin="0,0,12,0" 
+                                           Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="AI Features" FontWeight="SemiBold" FontSize="14"/>
+                                <TextBlock Text="Analyze files with AI to suggest categories and names"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12" TextWrapping="Wrap"/>
                             </StackPanel>
-                            <ui:ToggleSwitch Grid.Column="1" 
-                                          IsChecked="{Binding IsEnabled, Mode=TwoWay}"
-                                          VerticalAlignment="Center"/>
+                            <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding IsEnabled, Mode=TwoWay}" 
+                                             IsEnabled="{Binding CanEnableAi}" VerticalAlignment="Center"/>
                         </Grid>
                     </ui:CardControl.Header>
                 </ui:CardControl>
 
-                <!-- Privacy Disclaimer -->
-                <Border Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
-                        CornerRadius="8"
-                        Padding="16"
-                        Margin="0,0,0,16"
-                        Visibility="{Binding DisclaimerAccepted, Converter={StaticResource InverseBoolToVisibilityConverter}}">
-                    <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                            <ui:SymbolIcon Symbol="Warning24" 
-                                           Foreground="{DynamicResource SystemFillColorCautionBrush}"
-                                           Margin="0,0,8,0"/>
-                            <TextBlock Text="Privacy Notice" 
-                                       FontWeight="Bold" 
-                                       FontSize="14"/>
-                        </StackPanel>
-                        <TextBlock TextWrapping="Wrap" 
-                                   Margin="0,0,0,12"
-                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}">
-                            When AI features are enabled, AutoDrop will send file content (images and text) 
-                            to Google's Gemini API for analysis. This helps categorize and rename your files 
-                            intelligently. Your files are processed according to Google's AI privacy policy.
-                        </TextBlock>
-                        <ui:Button Content="I Understand and Accept"
-                                   Appearance="Primary"
-                                   Command="{Binding AcceptDisclaimerCommand}"
-                                   HorizontalAlignment="Left"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- Accepted Badge -->
+                <!-- Accepted Badge with option to manage -->
                 <Border Background="{DynamicResource SystemFillColorSuccessBackgroundBrush}"
-                        CornerRadius="8"
-                        Padding="12"
-                        Margin="0,0,0,16"
-                        Visibility="{Binding DisclaimerAccepted, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <StackPanel Orientation="Horizontal">
-                        <ui:SymbolIcon Symbol="CheckmarkCircle24" 
-                                       Foreground="{DynamicResource SystemFillColorSuccessBrush}"
-                                       Margin="0,0,8,0"/>
-                        <TextBlock Text="Privacy terms accepted" 
-                                   VerticalAlignment="Center"/>
-                    </StackPanel>
+                        CornerRadius="8" Padding="12,8" Margin="0,0,0,16"
+                        Visibility="{Binding ShowAcceptedBadge, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="CheckmarkCircle24" Foreground="{DynamicResource SystemFillColorSuccessBrush}" Margin="0,0,8,0"/>
+                            <TextBlock Text="Privacy terms accepted" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" Text="Your preferences are saved" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="11"/>
+                    </Grid>
                 </Border>
 
-                <!-- API Key Section -->
-                <TextBlock Text="API Configuration" 
-                           FontWeight="SemiBold" 
-                           FontSize="16"
-                           Margin="0,0,0,12"/>
-
-                <ui:CardControl Margin="0,0,0,16">
+                <!-- Provider Selection -->
+                <TextBlock Text="AI Provider" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,12"
+                           Visibility="{Binding ShowAcceptedBadge, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                
+                <ui:CardControl Margin="0,0,0,16" Visibility="{Binding ShowAcceptedBadge, Converter={StaticResource BoolToVisibilityConverter}}">
                     <ui:CardControl.Header>
                         <StackPanel>
-                            <TextBlock Text="Gemini API Key" 
-                                       FontWeight="SemiBold"
-                                       Margin="0,0,0,4"/>
-                            <TextBlock Text="Get your free API key from Google AI Studio"
-                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                       FontSize="12"/>
+                            <TextBlock Text="Select Provider" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <ComboBox ItemsSource="{Binding AvailableProviders}" 
+                                      SelectedItem="{Binding SelectedProvider, Mode=TwoWay}"
+                                      HorizontalAlignment="Stretch" Margin="0,0,0,8">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding IconGlyph}" FontFamily="Segoe Fluent Icons" 
+                                                       FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Description}" FontSize="11" 
+                                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            
+                            <!-- Local Provider Badge -->
+                            <Border Background="{DynamicResource SystemFillColorSuccessBackgroundBrush}"
+                                    CornerRadius="4" Padding="8,4" HorizontalAlignment="Left"
+                                    Visibility="{Binding IsLocalProvider, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon Symbol="Shield24" FontSize="12" Margin="0,0,4,0"/>
+                                    <TextBlock Text="100% Private - No data leaves your machine" FontSize="11"/>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </ui:CardControl.Header>
-                    <StackPanel Margin="0,12,0,0">
-                        <ui:TextBox PlaceholderText="Enter your Gemini API key..."
-                                    Text="{Binding ApiKey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                    Margin="0,0,0,12"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <ui:Button Grid.Column="0"
-                                       Content="Validate Key"
-                                       Icon="{ui:SymbolIcon Checkmark24}"
-                                       Command="{Binding ValidateApiKeyCommand}"
-                                       IsEnabled="{Binding IsValidating, Converter={StaticResource InverseBoolConverter}}"/>
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding ValidationStatus}"
-                                       VerticalAlignment="Center"
-                                       Margin="12,0,0,0"
-                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                        </Grid>
-                        <ui:HyperlinkButton Content="Get API Key from Google AI Studio →"
-                                            NavigateUri="https://aistudio.google.com/apikey"
-                                            Margin="0,8,0,0"/>
-                    </StackPanel>
+                </ui:CardControl>
+
+                <!-- API Configuration -->
+                <TextBlock Text="Configuration" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,12"
+                           Visibility="{Binding ShowAcceptedBadge, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                
+                <ui:CardControl Margin="0,0,0,16" Visibility="{Binding ShowAcceptedBadge, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <ui:CardControl.Header>
+                        <StackPanel>
+                            <!-- API Key (for cloud providers) -->
+                            <StackPanel Visibility="{Binding RequiresApiKey, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock Text="{Binding ApiKeyLabel}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <ui:PasswordBox Password="{Binding ApiKey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                PlaceholderText="Enter your API key..." Margin="0,0,0,8"/>
+                                <ui:HyperlinkButton Content="Get API Key →" NavigateUri="{Binding ApiKeyHelpUrl}" Margin="0,0,0,8"/>
+                            </StackPanel>
+                            
+                            <!-- Base URL (for Ollama) -->
+                            <StackPanel Visibility="{Binding IsLocalProvider, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock Text="Ollama URL" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <ui:TextBox Text="{Binding BaseUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            PlaceholderText="http://localhost:11434" Margin="0,0,0,8"/>
+                            </StackPanel>
+
+                            <!-- Validate Button -->
+                            <Grid Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <ui:Button Grid.Column="0" Command="{Binding ValidateApiKeyCommand}"
+                                           IsEnabled="{Binding IsValidating, Converter={StaticResource InverseBoolConverter}}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ui:SymbolIcon Symbol="Checkmark24" Margin="0,0,8,0"/>
+                                        <TextBlock Text="Validate"/>
+                                    </StackPanel>
+                                </ui:Button>
+                                <TextBlock Grid.Column="1" Text="{Binding ValidationStatus}" VerticalAlignment="Center" Margin="12,0,0,0"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                            </Grid>
+                        </StackPanel>
+                    </ui:CardControl.Header>
+                </ui:CardControl>
+
+                <!-- Model Selection -->
+                <TextBlock Text="Model Selection" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,12"
+                           Visibility="{Binding ShowAcceptedBadge, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                
+                <ui:CardControl Margin="0,0,0,8" Visibility="{Binding ShowAcceptedBadge, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <ui:CardControl.Header>
+                        <StackPanel>
+                            <TextBlock Text="Text/Document Model" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBlock Text="Used for analyzing text documents, code, and PDFs" FontSize="11" 
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8"/>
+                            <ComboBox ItemsSource="{Binding TextModels}" 
+                                      SelectedItem="{Binding SelectedTextModel, Mode=TwoWay}"
+                                      HorizontalAlignment="Stretch">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                                            <TextBlock Text="{Binding Description}" FontSize="11" 
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+                    </ui:CardControl.Header>
+                </ui:CardControl>
+
+                <ui:CardControl Margin="0,0,0,16" Visibility="{Binding HasVisionModels, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <ui:CardControl.Header>
+                        <StackPanel>
+                            <TextBlock Text="Vision Model" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBlock Text="Used for analyzing images (photos, screenshots, diagrams)" FontSize="11" 
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8"/>
+                            <ComboBox ItemsSource="{Binding VisionModels}" 
+                                      SelectedItem="{Binding SelectedVisionModel, Mode=TwoWay}"
+                                      HorizontalAlignment="Stretch">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                                            <Border Background="{DynamicResource AccentFillColorDefaultBrush}" CornerRadius="2" Padding="4,1" Margin="0,0,8,0"
+                                                    Visibility="{Binding SupportsPdf, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <TextBlock Text="PDF" FontSize="9" Foreground="White"/>
+                                            </Border>
+                                            <TextBlock Text="{Binding Description}" FontSize="11" 
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+                    </ui:CardControl.Header>
                 </ui:CardControl>
 
                 <!-- Feature Toggles -->
-                <TextBlock Text="AI Features" 
-                           FontWeight="SemiBold" 
-                           FontSize="16"
-                           Margin="0,8,0,12"/>
+                <TextBlock Text="Features" FontWeight="SemiBold" FontSize="16" Margin="0,8,0,12"
+                           Visibility="{Binding ShowAcceptedBadge, Converter={StaticResource BoolToVisibilityConverter}}"/>
 
-                <ui:CardControl Margin="0,0,0,8">
+                <!-- Vision Analysis - Disabled if model doesn't support it -->
+                <ui:CardControl Margin="0,0,0,8" Visibility="{Binding ShowAcceptedBadge, Converter={StaticResource BoolToVisibilityConverter}}">
                     <ui:CardControl.Header>
                         <Grid>
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="👁️ Vision Drop" FontWeight="SemiBold"/>
-                                <TextBlock Text="Analyze images to detect content (pets, landscapes, receipts, etc.)"
-                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           FontSize="12"
-                                           TextWrapping="Wrap"/>
+                            <ui:SymbolIcon Grid.Column="0" Symbol="Eye24" FontSize="20" Margin="0,0,12,0"
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                           Opacity="{Binding CanEnableVision, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter=1|0.4}"/>
+                            <StackPanel Grid.Column="1">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Vision Analysis" FontWeight="SemiBold"/>
+                                    <Border Background="{DynamicResource SystemFillColorCriticalBackgroundBrush}" CornerRadius="2" 
+                                            Padding="6,2" Margin="8,0,0,0" VerticalAlignment="Center"
+                                            Visibility="{Binding CanEnableVision, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                                        <TextBlock Text="Model doesn't support vision" FontSize="10"/>
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock Text="Analyze images (photos, screenshots, receipts)" FontSize="12"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                             </StackPanel>
-                            <ui:ToggleSwitch Grid.Column="1" 
-                                          IsChecked="{Binding EnableVisionAnalysis, Mode=TwoWay}"
-                                          VerticalAlignment="Center"/>
+                            <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding EnableVisionAnalysis, Mode=TwoWay}" 
+                                             IsEnabled="{Binding CanEnableVision}" VerticalAlignment="Center"/>
                         </Grid>
                     </ui:CardControl.Header>
                 </ui:CardControl>
 
-                <ui:CardControl Margin="0,0,0,8">
+                <!-- Document Analysis -->
+                <ui:CardControl Margin="0,0,0,8" Visibility="{Binding ShowAcceptedBadge, Converter={StaticResource BoolToVisibilityConverter}}">
                     <ui:CardControl.Header>
                         <Grid>
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="🧠 Smart Context" FontWeight="SemiBold"/>
-                                <TextBlock Text="Read documents to classify them (invoices, contracts, resumes, etc.)"
-                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           FontSize="12"
-                                           TextWrapping="Wrap"/>
+                            <ui:SymbolIcon Grid.Column="0" Symbol="Document24" FontSize="20" Margin="0,0,12,0"
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                            <StackPanel Grid.Column="1">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Document Analysis" FontWeight="SemiBold"/>
+                                    <Border Background="{DynamicResource AccentFillColorDefaultBrush}" CornerRadius="2" 
+                                            Padding="6,2" Margin="8,0,0,0" VerticalAlignment="Center"
+                                            Visibility="{Binding CurrentModelSupportsPdf, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <TextBlock Text="PDF Support" FontSize="10" Foreground="White"/>
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock Text="Analyze documents (text files, code, PDFs if supported)" FontSize="12"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                             </StackPanel>
-                            <ui:ToggleSwitch Grid.Column="1" 
-                                          IsChecked="{Binding EnableDocumentAnalysis, Mode=TwoWay}"
-                                          VerticalAlignment="Center"/>
+                            <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding EnableDocumentAnalysis, Mode=TwoWay}" 
+                                             VerticalAlignment="Center"/>
                         </Grid>
                     </ui:CardControl.Header>
                 </ui:CardControl>
 
-                <ui:CardControl Margin="0,0,0,16">
+                <!-- Smart Rename -->
+                <ui:CardControl Margin="0,0,0,16" Visibility="{Binding ShowAcceptedBadge, Converter={StaticResource BoolToVisibilityConverter}}">
                     <ui:CardControl.Header>
                         <Grid>
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="✨ Magic Rename" FontWeight="SemiBold"/>
-                                <TextBlock Text="Suggest descriptive filenames based on content"
-                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           FontSize="12"
-                                           TextWrapping="Wrap"/>
+                            <ui:SymbolIcon Grid.Column="0" Symbol="Wand24" FontSize="20" Margin="0,0,12,0"
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Smart Rename" FontWeight="SemiBold"/>
+                                <TextBlock Text="Suggest descriptive filenames based on content" FontSize="12"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                             </StackPanel>
-                            <ui:ToggleSwitch Grid.Column="1" 
-                                          IsChecked="{Binding EnableSmartRename, Mode=TwoWay}"
-                                          VerticalAlignment="Center"/>
+                            <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding EnableSmartRename, Mode=TwoWay}" VerticalAlignment="Center"/>
                         </Grid>
                     </ui:CardControl.Header>
                 </ui:CardControl>
 
-                <!-- Advanced Settings -->
-                <TextBlock Text="Advanced" 
-                           FontWeight="SemiBold" 
-                           FontSize="16"
-                           Margin="0,8,0,12"/>
+                <!-- Advanced -->
+                <TextBlock Text="Advanced" FontWeight="SemiBold" FontSize="16" Margin="0,8,0,12"
+                           Visibility="{Binding ShowAcceptedBadge, Converter={StaticResource BoolToVisibilityConverter}}"/>
 
-                <ui:CardControl Margin="0,0,0,8">
+                <!-- Confidence Threshold -->
+                <ui:CardControl Margin="0,0,0,8" Visibility="{Binding ShowAcceptedBadge, Converter={StaticResource BoolToVisibilityConverter}}">
                     <ui:CardControl.Header>
                         <Grid>
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="140"/>
+                            </Grid.ColumnDefinitions>
+                            <ui:SymbolIcon Grid.Column="0" Symbol="Options24" FontSize="20" Margin="0,0,12,0"
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Confidence Threshold" FontWeight="SemiBold"/>
+                                <TextBlock Text="Minimum confidence to apply suggestions" FontSize="12"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Slider Width="90" Minimum="0.5" Maximum="1.0" TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                        Value="{Binding ConfidenceThreshold, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding ConfidenceThreshold, StringFormat={}{0:P0}}" Width="40" TextAlignment="Right"
+                                           VerticalAlignment="Center" Margin="8,0,0,0" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Grid>
+                    </ui:CardControl.Header>
+                </ui:CardControl>
+
+                <!-- Max File Size with warning -->
+                <ui:CardControl Margin="0,0,0,8" Visibility="{Binding ShowAcceptedBadge, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <ui:CardControl.Header>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="120"/>
                             </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="Confidence Threshold" FontWeight="SemiBold"/>
-                                <TextBlock Text="Minimum confidence score to apply AI suggestions"
-                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           FontSize="12"/>
+                            <ui:SymbolIcon Grid.Column="0" Symbol="ArrowUpload24" FontSize="20" Margin="0,0,12,0"
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Max File Size" FontWeight="SemiBold"/>
+                                <TextBlock Text="Skip AI analysis for files larger than this" FontSize="12"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                             </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                                <Slider Width="80" 
-                                        Minimum="0.5" 
-                                        Maximum="1.0" 
-                                        TickFrequency="0.1"
-                                        IsSnapToTickEnabled="True"
-                                        Value="{Binding ConfidenceThreshold, Mode=TwoWay}"
-                                        VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding ConfidenceThreshold, StringFormat={}{0:P0}}"
-                                           Width="40"
-                                           TextAlignment="Right"
-                                           VerticalAlignment="Center"
-                                           Margin="8,0,0,0"/>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                                <ui:NumberBox Value="{Binding MaxFileSizeMb, Mode=TwoWay}" Minimum="1" Maximum="50"
+                                              SpinButtonPlacementMode="Compact" Width="70"/>
+                                <TextBlock Text="MB" VerticalAlignment="Center" Margin="8,0,0,0" FontWeight="SemiBold"/>
                             </StackPanel>
                         </Grid>
                     </ui:CardControl.Header>
                 </ui:CardControl>
+                
+                <!-- Max File Size Warning Banner - Shows when warning exists -->
+                <Border CornerRadius="6" Padding="12,8" Margin="0,0,0,8"
+                        Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+                        Visibility="{Binding MaxFileSizeWarning, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="Info24" Foreground="{DynamicResource SystemFillColorCautionBrush}" Margin="0,0,8,0"/>
+                        <TextBlock Text="{Binding MaxFileSizeWarning}" VerticalAlignment="Center" FontSize="12"/>
+                    </StackPanel>
+                </Border>
 
-                <ui:CardControl Margin="0,0,0,16">
+                <!-- Default New Folder Location -->
+                <ui:CardControl Margin="0,0,0,16" Visibility="{Binding ShowAcceptedBadge, Converter={StaticResource BoolToVisibilityConverter}}">
                     <ui:CardControl.Header>
                         <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="100"/>
                             </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="Max File Size" FontWeight="SemiBold"/>
-                                <TextBlock Text="Skip AI analysis for files larger than this"
-                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           FontSize="12"/>
+                            <ui:SymbolIcon Grid.Row="0" Grid.Column="0" Grid.RowSpan="2" Symbol="FolderAdd24" FontSize="20" Margin="0,0,12,0"
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Top"/>
+                            <StackPanel Grid.Row="0" Grid.Column="1">
+                                <TextBlock Text="Default Location for New Folders" FontWeight="SemiBold"/>
+                                <TextBlock Text="Where AI-suggested new folders will be created" FontSize="12"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,8"/>
                             </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                                <ui:NumberBox Value="{Binding MaxFileSizeMb, Mode=TwoWay}"
-                                              Minimum="1"
-                                              Maximum="50"
-                                              SpinButtonPlacementMode="Compact"
-                                              Width="70"/>
-                                <TextBlock Text="MB" 
-                                           VerticalAlignment="Center"
-                                           Margin="8,0,0,0"/>
+                            <StackPanel Grid.Row="1" Grid.Column="1">
+                                <Border Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}" 
+                                        CornerRadius="4" Padding="10,8" Margin="0,0,0,8">
+                                    <TextBlock Text="{Binding DefaultFolderDisplayPath}" TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                </Border>
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:Button Command="{Binding BrowseDefaultFolderCommand}" Margin="0,0,8,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <ui:SymbolIcon Symbol="Folder24" Margin="0,0,6,0"/>
+                                            <TextBlock Text="Browse..."/>
+                                        </StackPanel>
+                                    </ui:Button>
+                                    <ui:Button Command="{Binding ResetDefaultFolderCommand}" Appearance="Secondary">
+                                        <StackPanel Orientation="Horizontal">
+                                            <ui:SymbolIcon Symbol="ArrowReset24" Margin="0,0,6,0"/>
+                                            <TextBlock Text="Reset to Documents"/>
+                                        </StackPanel>
+                                    </ui:Button>
+                                </StackPanel>
                             </StackPanel>
                         </Grid>
                     </ui:CardControl.Header>
@@ -279,32 +431,31 @@
         </ScrollViewer>
 
         <!-- Footer -->
-        <Border Grid.Row="2"
-                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                BorderThickness="0,1,0,0"
-                Padding="24,16">
+        <Border Grid.Row="2" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Padding="24,16">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 
-                <TextBlock Grid.Column="0"
-                           Text="Unsaved changes"
-                           Foreground="{DynamicResource SystemFillColorCautionBrush}"
-                           VerticalAlignment="Center"
-                           Visibility="{Binding HasUnsavedChanges, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <ui:SymbolIcon Symbol="Warning24" Foreground="{DynamicResource SystemFillColorCautionBrush}" 
+                                   Margin="0,0,8,0"
+                                   Visibility="{Binding HasUnsavedChanges, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    <TextBlock Text="Unsaved changes" VerticalAlignment="Center"
+                               Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                               Visibility="{Binding HasUnsavedChanges, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <ui:Button Content="Cancel"
-                               Click="OnCancelClick"
-                               Margin="0,0,12,0"/>
-                    <ui:Button Content="Save Settings"
-                               Appearance="Primary"
-                               Icon="{ui:SymbolIcon Save24}"
-                               Command="{Binding SaveSettingsCommand}"
-                               Click="OnSaveClick"/>
+                    <ui:Button Content="Cancel" Click="OnCancelClick" Margin="0,0,12,0"/>
+                    <ui:Button Appearance="Primary" Click="OnSaveClick">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="Save24" Margin="0,0,8,0"/>
+                            <TextBlock Text="Save Settings"/>
+                        </StackPanel>
+                    </ui:Button>
                 </StackPanel>
             </Grid>
         </Border>
