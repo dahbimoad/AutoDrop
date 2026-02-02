@@ -4,15 +4,10 @@ namespace AutoDrop.Models;
 
 /// <summary>
 /// Settings for AI-powered file analysis features.
+/// Supports multiple AI providers (OpenAI, Claude, Gemini, Groq, Ollama).
 /// </summary>
 public sealed class AiSettings
 {
-    /// <summary>
-    /// Google Gemini API key for AI features.
-    /// </summary>
-    [JsonPropertyName("apiKey")]
-    public string ApiKey { get; set; } = string.Empty;
-
     /// <summary>
     /// Whether AI-powered sorting is enabled.
     /// </summary>
@@ -25,6 +20,18 @@ public sealed class AiSettings
     /// </summary>
     [JsonPropertyName("disclaimerAccepted")]
     public bool DisclaimerAccepted { get; set; }
+
+    /// <summary>
+    /// The currently active AI provider.
+    /// </summary>
+    [JsonPropertyName("activeProvider")]
+    public AiProvider ActiveProvider { get; set; } = AiProvider.Groq;
+
+    /// <summary>
+    /// Configuration for each AI provider (API keys, models, etc.).
+    /// </summary>
+    [JsonPropertyName("providerConfigs")]
+    public List<AiProviderConfig> ProviderConfigs { get; set; } = [];
 
     /// <summary>
     /// Minimum confidence threshold (0.0-1.0) for AI suggestions to be applied.
@@ -57,11 +64,38 @@ public sealed class AiSettings
     public int MaxFileSizeMb { get; set; } = 10;
 
     /// <summary>
+    /// Default base path for AI-suggested new folders.
+    /// If empty, uses user's Documents folder.
+    /// </summary>
+    [JsonPropertyName("defaultNewFolderBasePath")]
+    public string DefaultNewFolderBasePath { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets the resolved base path for new folders.
+    /// Returns configured path or Documents folder as fallback.
+    /// </summary>
+    [JsonIgnore]
+    public string ResolvedNewFolderBasePath =>
+        !string.IsNullOrWhiteSpace(DefaultNewFolderBasePath) && Directory.Exists(DefaultNewFolderBasePath)
+            ? DefaultNewFolderBasePath
+            : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
+    /// <summary>
     /// Checks if AI features are fully configured and ready to use.
     /// </summary>
     [JsonIgnore]
-    public bool IsFullyConfigured => 
-        Enabled && 
-        DisclaimerAccepted && 
-        !string.IsNullOrWhiteSpace(ApiKey);
+    public bool IsFullyConfigured
+    {
+        get
+        {
+            if (!Enabled || !DisclaimerAccepted) return false;
+            var activeConfig = ProviderConfigs.FirstOrDefault(c => c.Provider == ActiveProvider);
+            if (activeConfig == null) return false;
+            
+            // Ollama doesn't need API key
+            if (ActiveProvider == AiProvider.Ollama) return true;
+            
+            return !string.IsNullOrWhiteSpace(activeConfig.ApiKey);
+        }
+    }
 }

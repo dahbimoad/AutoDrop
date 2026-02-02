@@ -56,6 +56,36 @@ public sealed class AiAnalysisResult
     public AiContentType ContentType { get; set; }
 
     /// <summary>
+    /// The ID of the matched custom folder (if AI matched to an existing folder).
+    /// </summary>
+    [JsonPropertyName("matchedFolderId")]
+    public string? MatchedFolderId { get; set; }
+
+    /// <summary>
+    /// The path of the matched custom folder.
+    /// </summary>
+    [JsonIgnore]
+    public string? MatchedFolderPath { get; set; }
+
+    /// <summary>
+    /// The name of the matched custom folder.
+    /// </summary>
+    [JsonIgnore]
+    public string? MatchedFolderName { get; set; }
+
+    /// <summary>
+    /// Suggested path for a new folder if no custom folder matches.
+    /// </summary>
+    [JsonPropertyName("suggestedNewFolderPath")]
+    public string? SuggestedNewFolderPath { get; set; }
+
+    /// <summary>
+    /// Whether the AI matched to an existing custom folder.
+    /// </summary>
+    [JsonIgnore]
+    public bool HasMatchedFolder => !string.IsNullOrEmpty(MatchedFolderId);
+
+    /// <summary>
     /// Creates a failed result with an error message.
     /// </summary>
     public static AiAnalysisResult Failed(string error) => new()
