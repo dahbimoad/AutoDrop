@@ -1,4 +1,6 @@
 using AutoDrop.Core.Constants;
+using AutoDrop.Services.AI;
+using AutoDrop.Services.AI.Providers;
 using AutoDrop.Services.Implementations;
 using AutoDrop.Services.Interfaces;
 using AutoDrop.ViewModels;
@@ -63,6 +65,7 @@ public static class ServiceCollectionExtensions
 
         // Core services (Singleton - shared across app)
         services.AddSingleton<IStorageService, StorageService>();
+        services.AddSingleton<ICredentialService, CredentialService>();
         services.AddSingleton<IRuleService, RuleService>();
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IFileOperationService, FileOperationService>();
@@ -71,7 +74,15 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IWindowService, WindowService>();
         services.AddSingleton<IDuplicateDetectionService, DuplicateDetectionService>();
         services.AddSingleton<IBatchOperationService, BatchOperationService>();
-        services.AddSingleton<IGeminiService, GeminiService>();
+
+        // AI Services (Multi-Provider)
+        // Providers are registered as singletons and injected into AiService via IEnumerable<IAiProvider>
+        services.AddSingleton<IAiProvider, OpenAiProvider>();
+        services.AddSingleton<IAiProvider, ClaudeProvider>();
+        services.AddSingleton<IAiProvider, GeminiProvider>();
+        services.AddSingleton<IAiProvider, GroqProvider>();
+        services.AddSingleton<IAiProvider, OllamaProvider>();
+        services.AddSingleton<IAiService, AiService>();
 
         // WPF UI Services
         services.AddSingleton<ISnackbarService, SnackbarService>();
