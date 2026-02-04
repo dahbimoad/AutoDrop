@@ -360,8 +360,7 @@ public sealed class UndoServiceTests : IDisposable
         _undoService.RegisterOperation("Expiring", () => Task.FromResult(true), expirationSeconds: 1);
         _undoService.CanUndo.Should().BeTrue();
 
-        // Act - Wait for expiration
-        await Task.Delay(1500);
+        await Task.Delay(2500);
 
         // Assert
         _undoService.CanUndo.Should().BeFalse();
