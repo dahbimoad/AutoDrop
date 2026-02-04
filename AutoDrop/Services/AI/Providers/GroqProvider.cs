@@ -45,9 +45,10 @@ public sealed class GroqProvider : AiProviderBase
         
         try
         {
+            var model = !string.IsNullOrEmpty(Config.TextModel) ? Config.TextModel : "llama-3.3-70b-versatile";
             var requestBody = new
             {
-                model = Config.TextModel.Length > 0 ? Config.TextModel : "llama-3.3-70b-versatile",
+                model,
                 messages = new[] { new { role = "user", content = "Hi" } },
                 max_tokens = 5
             };

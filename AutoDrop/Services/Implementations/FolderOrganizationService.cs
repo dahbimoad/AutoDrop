@@ -470,9 +470,13 @@ public sealed class FolderOrganizationService : IFolderOrganizationService
 
         // Check AI availability (async to refresh cache if needed)
         var isAiAvailable = await _aiService.IsAvailableAsync(cancellationToken).ConfigureAwait(false);
-        if (!isAiAvailable)
+        
+        // Local AI uses embeddings and can't generate text responses for filename analysis
+        // Fall back to pattern detection if AI is unavailable or doesn't support text prompts
+        if (!isAiAvailable || !_aiService.SupportsTextPrompts)
         {
-            _logger.LogWarning("AI service not available for name categorization, using fallback");
+            _logger.LogWarning("AI service not available or doesn't support text prompts (provider: {Provider}), using fallback pattern detection",
+                _aiService.ActiveProvider);
             return GroupByNameFallback(basePath, files);
         }
 

@@ -412,6 +412,10 @@ public sealed class FolderOrganizationServiceTests : IDisposable
             .ReturnsAsync(true);
 
         _aiServiceMock
+            .Setup(x => x.SupportsTextPrompts)
+            .Returns(true);
+
+        _aiServiceMock
             .Setup(x => x.AnalyzeTextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("Travel_Photos");
 
@@ -444,6 +448,10 @@ public sealed class FolderOrganizationServiceTests : IDisposable
         _aiServiceMock
             .Setup(x => x.IsAvailableAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
+
+        _aiServiceMock
+            .Setup(x => x.SupportsTextPrompts)
+            .Returns(true);
 
         _aiServiceMock
             .Setup(x => x.AnalyzeTextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -852,6 +860,10 @@ public sealed class FolderOrganizationServiceTests : IDisposable
             .ReturnsAsync(true);
 
         _aiServiceMock
+            .Setup(x => x.SupportsTextPrompts)
+            .Returns(true);
+
+        _aiServiceMock
             .Setup(x => x.AnalyzeTextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(reservedName);
 
@@ -880,6 +892,10 @@ public sealed class FolderOrganizationServiceTests : IDisposable
         _aiServiceMock
             .Setup(x => x.IsAvailableAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
+
+        _aiServiceMock
+            .Setup(x => x.SupportsTextPrompts)
+            .Returns(true);
 
         _aiServiceMock
             .Setup(x => x.AnalyzeTextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -914,6 +930,10 @@ public sealed class FolderOrganizationServiceTests : IDisposable
             .ReturnsAsync(true);
 
         _aiServiceMock
+            .Setup(x => x.SupportsTextPrompts)
+            .Returns(true);
+
+        _aiServiceMock
             .Setup(x => x.AnalyzeTextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("FolderName...");
 
@@ -941,6 +961,10 @@ public sealed class FolderOrganizationServiceTests : IDisposable
         _aiServiceMock
             .Setup(x => x.IsAvailableAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
+
+        _aiServiceMock
+            .Setup(x => x.SupportsTextPrompts)
+            .Returns(true);
 
         _aiServiceMock
             .Setup(x => x.AnalyzeTextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))

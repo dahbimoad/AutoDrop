@@ -1,5 +1,6 @@
 using AutoDrop.Core.Constants;
 using AutoDrop.Services.AI;
+using AutoDrop.Services.AI.Local;
 using AutoDrop.Services.AI.Providers;
 using AutoDrop.Services.Implementations;
 using AutoDrop.Services.Interfaces;
@@ -77,12 +78,16 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IFolderOrganizationService, FolderOrganizationService>();
 
         // AI Services (Multi-Provider)
-        // Providers are registered as singletons and injected into AiService via IEnumerable<IAiProvider>
+        // Local AI (default - ONNX-based, 100% offline)
+        services.AddSingleton<LocalAiOptions>();
+        services.AddSingleton<OnnxModelManager>();
+        services.AddSingleton<IAiProvider, LocalAiProvider>();
+        
+        // Cloud providers (optional, require API keys)
         services.AddSingleton<IAiProvider, OpenAiProvider>();
         services.AddSingleton<IAiProvider, ClaudeProvider>();
         services.AddSingleton<IAiProvider, GeminiProvider>();
         services.AddSingleton<IAiProvider, GroqProvider>();
-        services.AddSingleton<IAiProvider, OllamaProvider>();
         services.AddSingleton<IAiService, AiService>();
 
         // WPF UI Services

@@ -297,7 +297,7 @@ The following technical improvements were implemented to ensure production readi
 | US-16b | Vision/Image Analysis | 🟡 High | ✅ Done |
 | US-16c | Document/PDF Analysis | 🟡 High | ✅ Done |
 | US-16d | Smart File Renaming | 🟢 Medium | ✅ Done |
-| US-16e | Local AI (Ollama) | 🟢 Medium | ✅ Done |
+| US-16e | Local AI (Offline) | 🟢 Medium | ✅ Done |
 | US-16f | Secure API Key Storage | 🔴 Critical | ✅ Done (DPAPI) |
 
 ### Phase 5: Distribution (v2.0) ✅ COMPLETE
@@ -595,7 +595,7 @@ As a user, I want the app to analyze file content (not just extensions) to sugge
 - [x] Analyze images with Vision AI (photos, screenshots, receipts)
 - [x] Show AI confidence level in suggestions
 - [x] User can enable/disable AI in settings
-- [x] Privacy option: Local AI with Ollama (no cloud)
+- [x] Privacy option: Local AI with ONNX models (100% offline)
 - [x] Fallback to extension-based if AI fails or disabled
 - [x] Smart file renaming suggestions based on content
 - [x] Match to user's existing custom folders (priority over new folders)
@@ -609,7 +609,7 @@ As a user, I want the app to analyze file content (not just extensions) to sugge
 | **Claude** | Claude 3.5 Sonnet/Haiku, Claude 3 Opus | ✅ | ✅ | Best for documents |
 | **Gemini** | Gemini 1.5 Pro/Flash, Gemini 2.0 Flash | ✅ | ✅ | Huge context (2M tokens) |
 | **Groq** | Llama 3.3 70B, 3.2 90B Vision, Mixtral | ✅ | ❌ | Ultra-fast inference |
-| **Ollama** | LLaVA 7B/13B, Llama 3.2, Mistral, Qwen 2.5 | ✅ | ❌ | 100% local/private |
+| **Local AI** | ONNX classification models | ✅ | ❌ | 100% offline/private (default) |
 
 **Security:**
 - API keys stored securely using Windows DPAPI encryption
@@ -818,7 +818,7 @@ public class OperationHistory
 - `IHistoryService` - Track and manage operation history
 - `IDuplicateDetectionService` - Hash comparison and duplicate handling ✅ Done
 - `IAiService` - Multi-provider AI orchestration (replaces IAICategorizationService) ✅ Done
-- `IAiProvider` - Provider interface (OpenAI, Claude, Gemini, Groq, Ollama) ✅ Done
+- `IAiProvider` - Provider interface (OpenAI, Claude, Gemini, Groq, Local) ✅ Done
 - `ICredentialService` - Secure API key storage with DPAPI ✅ Done
 - `IFolderOrganizationService` - AI-powered folder organization ✅ Done
 - `IUpdateService` - Check for updates and auto-install

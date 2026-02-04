@@ -57,6 +57,22 @@ public sealed class CredentialService : ICredentialService
             var encryptedBytes = ProtectedData.Protect(plainBytes, EntropyBytes, DataProtectionScope.CurrentUser);
             
             var filePath = GetCredentialPath(key);
+            
+            // Delete existing file first to avoid access issues with hidden files
+            if (File.Exists(filePath))
+            {
+                try
+                {
+                    // Remove hidden attribute before deleting
+                    File.SetAttributes(filePath, FileAttributes.Normal);
+                    File.Delete(filePath);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to remove existing credential file, attempting overwrite");
+                }
+            }
+            
             await File.WriteAllBytesAsync(filePath, encryptedBytes);
             
             // Set file as hidden for additional privacy
