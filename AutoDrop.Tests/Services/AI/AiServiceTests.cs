@@ -1,4 +1,5 @@
 using AutoDrop.Services.AI;
+using AutoDrop.Services.AI.Local;
 using AutoDrop.Services.AI.Providers;
 using AutoDrop.Tests.Fixtures;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -37,13 +38,16 @@ public sealed class AiServiceTests : IDisposable
     private AiService CreateAiService()
     {
         // Create provider instances to inject
+        var localAiOptions = new LocalAiOptions();
+        var modelManager = new OnnxModelManager(localAiOptions, NullLogger<OnnxModelManager>.Instance);
+        
         var providers = new IAiProvider[]
         {
+            new LocalAiProvider(modelManager, localAiOptions, NullLogger<LocalAiProvider>.Instance),
             new OpenAiProvider(NullLogger<OpenAiProvider>.Instance),
             new ClaudeProvider(NullLogger<ClaudeProvider>.Instance),
             new GeminiProvider(NullLogger<GeminiProvider>.Instance),
-            new GroqProvider(NullLogger<GroqProvider>.Instance),
-            new OllamaProvider(NullLogger<OllamaProvider>.Instance)
+            new GroqProvider(NullLogger<GroqProvider>.Instance)
         };
 
         return new AiService(
@@ -96,11 +100,11 @@ public sealed class AiServiceTests : IDisposable
     {
         // Assert
         _service.AvailableProviders.Should().HaveCount(5);
+        _service.AvailableProviders.Should().Contain(p => p.Provider == AiProvider.Local);
         _service.AvailableProviders.Should().Contain(p => p.Provider == AiProvider.OpenAI);
         _service.AvailableProviders.Should().Contain(p => p.Provider == AiProvider.Claude);
         _service.AvailableProviders.Should().Contain(p => p.Provider == AiProvider.Gemini);
         _service.AvailableProviders.Should().Contain(p => p.Provider == AiProvider.Groq);
-        _service.AvailableProviders.Should().Contain(p => p.Provider == AiProvider.Ollama);
     }
 
     [Fact]
@@ -159,13 +163,13 @@ public sealed class AiServiceTests : IDisposable
     }
 
     [Fact]
-    public void AvailableProviders_OllamaIsLocal()
+    public void AvailableProviders_LocalIsLocal()
     {
         // Assert
-        var ollamaProvider = _service.AvailableProviders.FirstOrDefault(p => p.Provider == AiProvider.Ollama);
-        ollamaProvider.Should().NotBeNull();
-        ollamaProvider!.IsLocal.Should().BeTrue();
-        ollamaProvider.RequiresApiKey.Should().BeFalse();
+        var localProvider = _service.AvailableProviders.FirstOrDefault(p => p.Provider == AiProvider.Local);
+        localProvider.Should().NotBeNull();
+        localProvider!.IsLocal.Should().BeTrue();
+        localProvider.RequiresApiKey.Should().BeFalse();
     }
 
     #endregion

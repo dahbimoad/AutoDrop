@@ -42,7 +42,12 @@ public sealed class AiService : IAiService, IDisposable
         // Use injected providers from DI container to avoid duplicate instances
         _providers = providers.ToDictionary(p => p.ProviderType);
 
-        _availableProviders = _providers.Values.Select(p => p.ProviderInfo).ToList();
+        // Order providers with Local first (default), then alphabetically by name
+        _availableProviders = _providers.Values
+            .OrderByDescending(p => p.ProviderType == AiProvider.Local)
+            .ThenBy(p => p.ProviderInfo.DisplayName)
+            .Select(p => p.ProviderInfo)
+            .ToList();
         _logger.LogDebug("AiService initialized with {Count} providers", _providers.Count);
     }
 
@@ -56,11 +61,12 @@ public sealed class AiService : IAiService, IDisposable
     private bool IsCacheValid => _cachedSettings != null && 
                                   DateTime.UtcNow - _settingsCacheTime < SettingsCacheDuration;
 
-    public AiProvider ActiveProvider => _activeProvider?.ProviderType ?? AiProvider.Groq;
+    public AiProvider ActiveProvider => _activeProvider?.ProviderType ?? AiProvider.Local;
     public IReadOnlyList<AiProviderInfo> AvailableProviders => _availableProviders;
     public AiProviderInfo? ActiveProviderInfo => _activeProvider?.ProviderInfo;
     public bool SupportsVision => _activeProvider?.SupportsVision ?? false;
     public bool SupportsPdf => _activeProvider?.SupportsPdf ?? false;
+    public bool SupportsTextPrompts => _activeProvider?.ProviderInfo.SupportsTextPrompts ?? false;
 
     /// <summary>
     /// Checks if AI is available. Uses cached settings to avoid blocking.

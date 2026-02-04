@@ -20,7 +20,7 @@ public sealed class AiModelsTests
         Enum.IsDefined(AiProvider.Claude).Should().BeTrue();
         Enum.IsDefined(AiProvider.Gemini).Should().BeTrue();
         Enum.IsDefined(AiProvider.Groq).Should().BeTrue();
-        Enum.IsDefined(AiProvider.Ollama).Should().BeTrue();
+        Enum.IsDefined(AiProvider.Local).Should().BeTrue();
     }
 
     [Theory]
@@ -28,7 +28,7 @@ public sealed class AiModelsTests
     [InlineData(AiProvider.Claude, "Claude")]
     [InlineData(AiProvider.Gemini, "Gemini")]
     [InlineData(AiProvider.Groq, "Groq")]
-    [InlineData(AiProvider.Ollama, "Ollama")]
+    [InlineData(AiProvider.Local, "Local")]
     public void AiProvider_ToString_ReturnsCorrectName(AiProvider provider, string expectedName)
     {
         // Assert
@@ -105,7 +105,7 @@ public sealed class AiModelsTests
     [InlineData(AiProvider.Claude, "AutoDrop_Claude_ApiKey")]
     [InlineData(AiProvider.Gemini, "AutoDrop_Gemini_ApiKey")]
     [InlineData(AiProvider.Groq, "AutoDrop_Groq_ApiKey")]
-    [InlineData(AiProvider.Ollama, "AutoDrop_Ollama_ApiKey")]
+    [InlineData(AiProvider.Local, "AutoDrop_Local_ApiKey")]
     public void AiProviderConfig_CredentialKey_CorrectForAllProviders(AiProvider provider, string expectedKey)
     {
         // Arrange
@@ -215,21 +215,21 @@ public sealed class AiModelsTests
         // Arrange & Act
         var providerInfo = new AiProviderInfo
         {
-            Provider = AiProvider.Ollama,
-            DisplayName = "Ollama (Local)",
-            Description = "Local AI for privacy",
+            Provider = AiProvider.Local,
+            DisplayName = "Local AI (Offline)",
+            Description = "100% offline AI using ONNX",
             IsLocal = true,
             RequiresApiKey = false,
-            DefaultBaseUrl = "http://localhost:11434",
+            DefaultBaseUrl = null,
             Models = [
-                new AiModelInfo { Id = "llava", DisplayName = "LLaVA" }
+                new AiModelInfo { Id = "all-MiniLM-L6-v2", DisplayName = "MiniLM Embeddings" }
             ]
         };
 
         // Assert
         providerInfo.IsLocal.Should().BeTrue();
         providerInfo.RequiresApiKey.Should().BeFalse();
-        providerInfo.DefaultBaseUrl.Should().Be("http://localhost:11434");
+        providerInfo.DefaultBaseUrl.Should().BeNull(); // Local provider doesn't use base URL
     }
 
     [Fact]
@@ -285,7 +285,7 @@ public sealed class AiModelsTests
         // Assert
         settings.Enabled.Should().BeFalse();
         settings.DisclaimerAccepted.Should().BeFalse();
-        settings.ActiveProvider.Should().Be(AiProvider.Groq);
+        settings.ActiveProvider.Should().Be(AiProvider.Local); // Local is now the default
         settings.ConfidenceThreshold.Should().Be(0.7);
         settings.EnableSmartRename.Should().BeTrue();
         settings.EnableVisionAnalysis.Should().BeTrue();
@@ -384,19 +384,19 @@ public sealed class AiModelsTests
     }
 
     [Fact]
-    public void AiSettings_IsFullyConfigured_WithOllamaNoApiKey_ReturnsTrue()
+    public void AiSettings_IsFullyConfigured_WithLocalNoApiKey_ReturnsTrue()
     {
         // Arrange
         var settings = new AiSettings
         {
             Enabled = true,
             DisclaimerAccepted = true,
-            ActiveProvider = AiProvider.Ollama,
+            ActiveProvider = AiProvider.Local,
             ProviderConfigs = [
                 new AiProviderConfig
                 {
-                    Provider = AiProvider.Ollama,
-                    ApiKey = "" // Ollama doesn't need API key
+                    Provider = AiProvider.Local,
+                    ApiKey = "" // Local doesn't need API key
                 }
             ]
         };

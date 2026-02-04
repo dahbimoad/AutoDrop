@@ -46,6 +46,12 @@ public interface IAiService
     bool SupportsPdf { get; }
 
     /// <summary>
+    /// Whether the current provider supports text prompts/chat (generative AI).
+    /// Embedding-only models (Local AI) don't support this.
+    /// </summary>
+    bool SupportsTextPrompts { get; }
+
+    /// <summary>
     /// Refreshes the availability check asynchronously.
     /// Call this after configuration changes to update the IsAvailable property.
     /// </summary>

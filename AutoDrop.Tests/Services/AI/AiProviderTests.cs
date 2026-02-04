@@ -1,4 +1,5 @@
 using AutoDrop.Models;
+using AutoDrop.Services.AI.Local;
 using AutoDrop.Services.AI.Providers;
 using AutoDrop.Tests.Fixtures;
 using FluentAssertions;
@@ -366,23 +367,27 @@ public sealed class AiProviderTests : IDisposable
 
     #endregion
 
-    #region Ollama Provider Tests
+    #region Local AI Provider Tests
 
     [Fact]
-    public void OllamaProvider_ProviderType_IsOllama()
+    public void LocalAiProvider_ProviderType_IsLocal()
     {
         // Arrange
-        using var provider = new OllamaProvider(NullLogger<OllamaProvider>.Instance);
+        var options = new LocalAiOptions();
+        var modelManager = new OnnxModelManager(options, NullLogger<OnnxModelManager>.Instance);
+        using var provider = new LocalAiProvider(modelManager, options, NullLogger<LocalAiProvider>.Instance);
 
         // Assert
-        provider.ProviderType.Should().Be(AiProvider.Ollama);
+        provider.ProviderType.Should().Be(AiProvider.Local);
     }
 
     [Fact]
-    public void OllamaProvider_ProviderInfo_IsLocal()
+    public void LocalAiProvider_ProviderInfo_IsLocal()
     {
         // Arrange
-        using var provider = new OllamaProvider(NullLogger<OllamaProvider>.Instance);
+        var options = new LocalAiOptions();
+        var modelManager = new OnnxModelManager(options, NullLogger<OnnxModelManager>.Instance);
+        using var provider = new LocalAiProvider(modelManager, options, NullLogger<LocalAiProvider>.Instance);
 
         // Assert
         provider.ProviderInfo.IsLocal.Should().BeTrue();
@@ -390,53 +395,78 @@ public sealed class AiProviderTests : IDisposable
     }
 
     [Fact]
-    public void OllamaProvider_ProviderInfo_HasDefaultBaseUrl()
+    public void LocalAiProvider_SupportsVision_ReturnsTrue()
     {
         // Arrange
-        using var provider = new OllamaProvider(NullLogger<OllamaProvider>.Instance);
+        var options = new LocalAiOptions();
+        var modelManager = new OnnxModelManager(options, NullLogger<OnnxModelManager>.Instance);
+        using var provider = new LocalAiProvider(modelManager, options, NullLogger<LocalAiProvider>.Instance);
 
         // Assert
-        provider.ProviderInfo.DefaultBaseUrl.Should().Contain("localhost:11434");
+        provider.SupportsVision.Should().BeTrue();
     }
 
     [Fact]
-    public void OllamaProvider_Configure_UsesCustomBaseUrl()
+    public void LocalAiProvider_SupportsPdf_ReturnsFalse()
     {
         // Arrange
-        using var provider = new OllamaProvider(NullLogger<OllamaProvider>.Instance);
-        var config = new AiProviderConfig
-        {
-            Provider = AiProvider.Ollama,
-            BaseUrl = "http://custom-host:11434",
-            VisionModel = "llava"
-        };
-
-        // Act
-        provider.Configure(config);
-
-        // Assert - No exception thrown
-        provider.ProviderType.Should().Be(AiProvider.Ollama);
-    }
-
-    [Fact]
-    public void OllamaProvider_Models_IncludeVisionModel()
-    {
-        // Arrange
-        using var provider = new OllamaProvider(NullLogger<OllamaProvider>.Instance);
-
-        // Assert
-        provider.ProviderInfo.Models.Should().Contain(m => m.SupportsVision);
-        provider.ProviderInfo.Models.Should().Contain(m => m.Id.Contains("llava", StringComparison.OrdinalIgnoreCase));
-    }
-
-    [Fact]
-    public void OllamaProvider_SupportsPdf_ReturnsFalse()
-    {
-        // Arrange
-        using var provider = new OllamaProvider(NullLogger<OllamaProvider>.Instance);
+        var options = new LocalAiOptions();
+        var modelManager = new OnnxModelManager(options, NullLogger<OnnxModelManager>.Instance);
+        using var provider = new LocalAiProvider(modelManager, options, NullLogger<LocalAiProvider>.Instance);
 
         // Assert
         provider.SupportsPdf.Should().BeFalse();
+    }
+
+    [Fact]
+    public void LocalAiProvider_Models_HasDefaultModel()
+    {
+        // Arrange
+        var options = new LocalAiOptions();
+        var modelManager = new OnnxModelManager(options, NullLogger<OnnxModelManager>.Instance);
+        using var provider = new LocalAiProvider(modelManager, options, NullLogger<LocalAiProvider>.Instance);
+
+        // Assert
+        provider.ProviderInfo.Models.Should().NotBeEmpty();
+        provider.ProviderInfo.Models.Should().Contain(m => m.Id == "all-MiniLM-L6-v2");
+    }
+
+    [Fact]
+    public async Task LocalAiProvider_ValidateAsync_WithoutModels_ReturnsFalse()
+    {
+        // Arrange
+        var options = new LocalAiOptions 
+        { 
+            ModelsPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()) 
+        };
+        var modelManager = new OnnxModelManager(options, NullLogger<OnnxModelManager>.Instance);
+        using var provider = new LocalAiProvider(modelManager, options, NullLogger<LocalAiProvider>.Instance);
+
+        // Act
+        var isValid = await provider.ValidateAsync();
+
+        // Assert
+        isValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task LocalAiProvider_AnalyzeImageAsync_WithoutModels_ReturnsError()
+    {
+        // Arrange
+        var options = new LocalAiOptions 
+        { 
+            ModelsPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()) 
+        };
+        var modelManager = new OnnxModelManager(options, NullLogger<OnnxModelManager>.Instance);
+        using var provider = new LocalAiProvider(modelManager, options, NullLogger<LocalAiProvider>.Instance);
+        var imagePath = _fixture.CreateImageFile("test.jpg");
+
+        // Act
+        var result = await provider.AnalyzeImageAsync(imagePath);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.Error.Should().Contain("not downloaded");
     }
 
     #endregion
@@ -472,9 +502,11 @@ public sealed class AiProviderTests : IDisposable
     }
 
     [Fact]
-    public void AllProviders_Ollama_HasNonEmptyModels()
+    public void AllProviders_Local_HasNonEmptyModels()
     {
-        using var provider = new OllamaProvider(NullLogger<OllamaProvider>.Instance);
+        var options = new LocalAiOptions();
+        var modelManager = new OnnxModelManager(options, NullLogger<OnnxModelManager>.Instance);
+        using var provider = new LocalAiProvider(modelManager, options, NullLogger<LocalAiProvider>.Instance);
         provider.ProviderInfo.Models.Should().NotBeEmpty();
     }
 
@@ -511,9 +543,11 @@ public sealed class AiProviderTests : IDisposable
     }
 
     [Fact]
-    public void AllProviders_Ollama_DisposesCorrectly()
+    public void AllProviders_Local_DisposesCorrectly()
     {
-        var provider = new OllamaProvider(NullLogger<OllamaProvider>.Instance);
+        var options = new LocalAiOptions();
+        var modelManager = new OnnxModelManager(options, NullLogger<OnnxModelManager>.Instance);
+        var provider = new LocalAiProvider(modelManager, options, NullLogger<LocalAiProvider>.Instance);
         provider.Dispose();
         provider.Dispose(); // Double dispose should be safe
     }
@@ -828,13 +862,16 @@ public sealed class AiProviderTests : IDisposable
         using var claude = new ClaudeProvider(NullLogger<ClaudeProvider>.Instance);
         using var gemini = new GeminiProvider(NullLogger<GeminiProvider>.Instance);
         using var groq = new GroqProvider(NullLogger<GroqProvider>.Instance);
-        using var ollama = new OllamaProvider(NullLogger<OllamaProvider>.Instance);
+        
+        var localOptions = new LocalAiOptions();
+        var localModelManager = new OnnxModelManager(localOptions, NullLogger<OnnxModelManager>.Instance);
+        using var local = new LocalAiProvider(localModelManager, localOptions, NullLogger<LocalAiProvider>.Instance);
 
         openai.ProviderInfo.IconGlyph.Should().NotBeNullOrEmpty();
         claude.ProviderInfo.IconGlyph.Should().NotBeNullOrEmpty();
         gemini.ProviderInfo.IconGlyph.Should().NotBeNullOrEmpty();
         groq.ProviderInfo.IconGlyph.Should().NotBeNullOrEmpty();
-        ollama.ProviderInfo.IconGlyph.Should().NotBeNullOrEmpty();
+        local.ProviderInfo.IconGlyph.Should().NotBeNullOrEmpty();
     }
 
     [Fact]
@@ -845,13 +882,16 @@ public sealed class AiProviderTests : IDisposable
         using var claude = new ClaudeProvider(NullLogger<ClaudeProvider>.Instance);
         using var gemini = new GeminiProvider(NullLogger<GeminiProvider>.Instance);
         using var groq = new GroqProvider(NullLogger<GroqProvider>.Instance);
-        using var ollama = new OllamaProvider(NullLogger<OllamaProvider>.Instance);
+        
+        var localOptions = new LocalAiOptions();
+        var localModelManager = new OnnxModelManager(localOptions, NullLogger<OnnxModelManager>.Instance);
+        using var local = new LocalAiProvider(localModelManager, localOptions, NullLogger<LocalAiProvider>.Instance);
 
         openai.ProviderInfo.Description.Should().NotBeNullOrEmpty();
         claude.ProviderInfo.Description.Should().NotBeNullOrEmpty();
         gemini.ProviderInfo.Description.Should().NotBeNullOrEmpty();
         groq.ProviderInfo.Description.Should().NotBeNullOrEmpty();
-        ollama.ProviderInfo.Description.Should().NotBeNullOrEmpty();
+        local.ProviderInfo.Description.Should().NotBeNullOrEmpty();
     }
 
     [Fact]

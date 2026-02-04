@@ -30,7 +30,7 @@ public sealed class AiProviderConfig
     public bool IsKeySecured { get; set; }
 
     /// <summary>
-    /// Base URL for API calls (useful for Ollama custom endpoints).
+    /// Base URL for API calls (useful for custom API endpoints).
     /// </summary>
     [JsonPropertyName("baseUrl")]
     public string? BaseUrl { get; set; }
@@ -152,4 +152,10 @@ public sealed record AiProviderInfo
     /// Common glyphs: E99A (Robot), E9D9 (Lightbulb), E945 (Sparkle), E945 (Lightning), E977 (Home)
     /// </summary>
     public string IconGlyph { get; init; } = "\uE99A";
+
+    /// <summary>
+    /// Whether this provider supports text prompts/chat (generative AI).
+    /// Embedding-only models like Local AI (MiniLM) don't support this.
+    /// </summary>
+    public bool SupportsTextPrompts { get; init; } = true;
 }

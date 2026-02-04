@@ -55,6 +55,9 @@
         <PackageReference Include="Serilog" Version="4.0.0" />
         <PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
         <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+        <!-- Local AI (ONNX Runtime for offline classification) -->
+        <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.17.1" />
+        <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
     </ItemGroup>
 
 </Project>

@@ -44,6 +44,7 @@ public partial class FolderOrganizationViewModel : Base.ViewModelBase, IDisposab
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsDateOptionsVisible))]
     [NotifyPropertyChangedFor(nameof(IsAiOptionsVisible))]
+    [NotifyPropertyChangedFor(nameof(ShowNameCriteriaWarning))]
     [NotifyCanExecuteChangedFor(nameof(PreviewCommand))]
     private OrganizationCriteria _selectedCriteria = OrganizationCriteria.ByExtension;
 
@@ -89,6 +90,13 @@ public partial class FolderOrganizationViewModel : Base.ViewModelBase, IDisposab
     [ObservableProperty]
     private string _aiStatusMessage = string.Empty;
 
+    [ObservableProperty]
+    private string _activeAiProviderName = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowNameCriteriaWarning))]
+    private bool _supportsTextPrompts;
+
     #endregion
 
     #region Collections
@@ -127,6 +135,11 @@ public partial class FolderOrganizationViewModel : Base.ViewModelBase, IDisposab
 
     public bool IsDateOptionsVisible => SelectedCriteria == OrganizationCriteria.ByDate;
     public bool IsAiOptionsVisible => SelectedCriteria is OrganizationCriteria.ByContent or OrganizationCriteria.ByName;
+    
+    /// <summary>
+    /// Shows info banner when "Name" criteria is selected but AI doesn't support text prompts.
+    /// </summary>
+    public bool ShowNameCriteriaWarning => SelectedCriteria == OrganizationCriteria.ByName && IsAiAvailable && !SupportsTextPrompts;
 
     #endregion
 
@@ -200,21 +213,36 @@ public partial class FolderOrganizationViewModel : Base.ViewModelBase, IDisposab
         {
             await _aiService.RefreshAvailabilityAsync(cancellationToken).ConfigureAwait(false);
             IsAiAvailable = _aiService.IsAvailable;
+            SupportsTextPrompts = _aiService.SupportsTextPrompts;
             
             if (IsAiAvailable)
             {
-                AiStatusMessage = $"AI ready ({_aiService.ActiveProvider})";
+                var providerInfo = _aiService.ActiveProviderInfo;
+                ActiveAiProviderName = providerInfo?.DisplayName ?? _aiService.ActiveProvider.ToString();
+                
+                if (SupportsTextPrompts)
+                {
+                    AiStatusMessage = $"AI ready ({ActiveAiProviderName})";
+                }
+                else
+                {
+                    // Local AI doesn't support text prompts - inform user
+                    AiStatusMessage = $"{ActiveAiProviderName} - Content analysis only (Name analysis uses patterns)";
+                }
             }
             else
             {
-                AiStatusMessage = "AI not configured - configure in Settings";
+                ActiveAiProviderName = string.Empty;
+                AiStatusMessage = "AI not configured - configure in Settings → AI Settings";
             }
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to check AI availability");
             IsAiAvailable = false;
-            AiStatusMessage = "AI unavailable";
+            SupportsTextPrompts = false;
+            ActiveAiProviderName = string.Empty;
+            AiStatusMessage = "AI unavailable - configure in Settings → AI Settings";
         }
     }
 

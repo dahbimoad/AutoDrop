@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using AutoDrop.Models;
+using AutoDrop.Services.AI.Local;
 using AutoDrop.Services.Interfaces;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -14,6 +15,7 @@ public sealed partial class AiSettingsViewModel : ObservableObject
 {
     private readonly IAiService _aiService;
     private readonly ISettingsService _settingsService;
+    private readonly OnnxModelManager _modelManager;
     private readonly ILogger<AiSettingsViewModel> _logger;
 
     [ObservableProperty]
@@ -88,6 +90,26 @@ public sealed partial class AiSettingsViewModel : ObservableObject
     [ObservableProperty]
     private bool _isLoading;
 
+    // Local AI model properties
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LocalModelStatusText))]
+    [NotifyPropertyChangedFor(nameof(LocalModelsReady))]
+    [NotifyPropertyChangedFor(nameof(CanDownloadModels))]
+    private bool _isDownloadingModels;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LocalModelStatusText))]
+    [NotifyPropertyChangedFor(nameof(LocalModelsReady))]
+    [NotifyPropertyChangedFor(nameof(CanDownloadModels))]
+    private bool _localModelsDownloaded;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LocalModelStatusText))]
+    private double _modelDownloadProgress;
+
+    [ObservableProperty]
+    private string _modelDownloadMessage = string.Empty;
+
     public ObservableCollection<AiProviderInfo> AvailableProviders { get; } = [];
     public ObservableCollection<AiModelInfo> TextModels { get; } = [];
     public ObservableCollection<AiModelInfo> VisionModels { get; } = [];
@@ -99,6 +121,15 @@ public sealed partial class AiSettingsViewModel : ObservableObject
     public string ApiKeyLabel => SelectedProvider?.DisplayName + " API Key" ?? "API Key";
     public string ApiKeyHelpUrl => SelectedProvider?.ApiKeyUrl ?? "";
     
+    // Local AI computed properties
+    public bool LocalModelsReady => LocalModelsDownloaded && !IsDownloadingModels;
+    public bool CanDownloadModels => !IsDownloadingModels && !LocalModelsDownloaded;
+    public string LocalModelStatusText => IsDownloadingModels 
+        ? $"Downloading... {ModelDownloadProgress:P0}" 
+        : LocalModelsDownloaded 
+            ? "✓ Models ready (~90MB)" 
+            : "Models not downloaded";
+
     /// <summary>
     /// User must accept privacy terms before enabling AI.
     /// </summary>
@@ -153,10 +184,12 @@ public sealed partial class AiSettingsViewModel : ObservableObject
     public AiSettingsViewModel(
         IAiService aiService,
         ISettingsService settingsService,
+        OnnxModelManager modelManager,
         ILogger<AiSettingsViewModel> logger)
     {
         _aiService = aiService ?? throw new ArgumentNullException(nameof(aiService));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _modelManager = modelManager ?? throw new ArgumentNullException(nameof(modelManager));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         foreach (var provider in _aiService.AvailableProviders)
@@ -164,7 +197,11 @@ public sealed partial class AiSettingsViewModel : ObservableObject
             AvailableProviders.Add(provider);
         }
 
-        _logger.LogDebug("AiSettingsViewModel initialized with {Count} providers", AvailableProviders.Count);
+        // Check initial model status
+        LocalModelsDownloaded = _modelManager.AreModelsDownloaded();
+
+        _logger.LogDebug("AiSettingsViewModel initialized with {Count} providers, LocalModels={Downloaded}", 
+            AvailableProviders.Count, LocalModelsDownloaded);
     }
 
     public async Task LoadSettingsAsync()
@@ -411,28 +448,89 @@ public sealed partial class AiSettingsViewModel : ObservableObject
     private async Task ValidateLocalProviderAsync()
     {
         IsValidating = true;
-        ValidationStatus = "Checking Ollama connection...";
+        ValidationStatus = "Checking Local AI models...";
 
         try
         {
             var config = CreateCurrentConfig();
             await _aiService.ConfigureProviderAsync(config);
-            var isValid = await _aiService.ValidateProviderAsync(AiProvider.Ollama);
+            var isValid = await _aiService.ValidateProviderAsync(AiProvider.Local);
 
             IsApiKeyValid = isValid;
             ValidationStatus = isValid 
-                ? "✓ Ollama is running!" 
-                : "✗ Ollama not detected. Make sure it's running.";
+                ? "✓ Local AI models ready!" 
+                : "✗ Models not downloaded. Click 'Download Models' to set up.";
+                
+            // Update local models status
+            LocalModelsDownloaded = isValid;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ollama validation failed");
-            ValidationStatus = $"✗ Connection error: {ex.Message}";
+            _logger.LogError(ex, "Local AI validation failed");
+            ValidationStatus = $"✗ Validation error: {ex.Message}";
             IsApiKeyValid = false;
         }
         finally
         {
             IsValidating = false;
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanDownloadModels))]
+    private async Task DownloadModelsAsync(CancellationToken ct)
+    {
+        IsDownloadingModels = true;
+        ModelDownloadProgress = 0;
+        ModelDownloadMessage = "Starting download...";
+        ValidationStatus = "Downloading AI models...";
+
+        try
+        {
+            var progress = new Progress<LocalModelStatus>(status =>
+            {
+                ModelDownloadProgress = status.DownloadProgress;
+                ModelDownloadMessage = status.StatusMessage;
+                
+                if (status.IsReady)
+                {
+                    LocalModelsDownloaded = true;
+                    ValidationStatus = "✓ Models downloaded successfully!";
+                    IsApiKeyValid = true;
+                }
+                else if (status.HasError)
+                {
+                    ValidationStatus = $"✗ Download failed: {status.ErrorMessage}";
+                }
+            });
+
+            await _modelManager.DownloadModelsAsync(progress, ct);
+            
+            // Verify download
+            LocalModelsDownloaded = _modelManager.AreModelsDownloaded();
+            
+            if (LocalModelsDownloaded)
+            {
+                _logger.LogInformation("Local AI models downloaded successfully");
+                ValidationStatus = "✓ Models ready! Local AI is now available.";
+                IsApiKeyValid = true;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Model download cancelled by user");
+            ValidationStatus = "Download cancelled.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to download AI models");
+            ValidationStatus = $"✗ Download failed: {ex.Message}";
+        }
+        finally
+        {
+            IsDownloadingModels = false;
+            OnPropertyChanged(nameof(CanDownloadModels));
+            OnPropertyChanged(nameof(LocalModelsReady));
+            OnPropertyChanged(nameof(LocalModelStatusText));
         }
     }
 
@@ -508,7 +606,7 @@ public sealed partial class AiSettingsViewModel : ObservableObject
 
     private AiProviderConfig CreateCurrentConfig() => new()
     {
-        Provider = SelectedProvider?.Provider ?? AiProvider.Groq,
+        Provider = SelectedProvider?.Provider ?? AiProvider.Local,
         ApiKey = string.Empty, // No longer store API key in config (use secure storage)
         IsKeySecured = !string.IsNullOrEmpty(ApiKey) && (SelectedProvider?.RequiresApiKey ?? false),
         BaseUrl = string.IsNullOrWhiteSpace(BaseUrl) ? null : BaseUrl,

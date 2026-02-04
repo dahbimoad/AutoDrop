@@ -29,7 +29,8 @@ public enum AiProvider
     Groq,
 
     /// <summary>
-    /// Local models via Ollama (privacy-focused, no API calls).
+    /// Local AI using ONNX models (100% offline, complete privacy).
+    /// Default recommended provider - no setup required.
     /// </summary>
-    Ollama
+    Local
 }

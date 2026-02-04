@@ -4,7 +4,7 @@ namespace AutoDrop.Models;
 
 /// <summary>
 /// Settings for AI-powered file analysis features.
-/// Supports multiple AI providers (OpenAI, Claude, Gemini, Groq, Ollama).
+/// Supports multiple AI providers (OpenAI, Claude, Gemini, Groq, Local).
 /// </summary>
 public sealed class AiSettings
 {
@@ -23,9 +23,10 @@ public sealed class AiSettings
 
     /// <summary>
     /// The currently active AI provider.
+    /// Defaults to Local for best out-of-box experience.
     /// </summary>
     [JsonPropertyName("activeProvider")]
-    public AiProvider ActiveProvider { get; set; } = AiProvider.Groq;
+    public AiProvider ActiveProvider { get; set; } = AiProvider.Local;
 
     /// <summary>
     /// Configuration for each AI provider (API keys, models, etc.).
@@ -92,10 +93,10 @@ public sealed class AiSettings
             var activeConfig = ProviderConfigs.FirstOrDefault(c => c.Provider == ActiveProvider);
             if (activeConfig == null) return false;
             
-            // Ollama doesn't need API key
-            if (ActiveProvider == AiProvider.Ollama) return true;
+            // Local AI doesn't need API key (just needs models downloaded)
+            if (ActiveProvider == AiProvider.Local) return true;
             
-            return !string.IsNullOrWhiteSpace(activeConfig.ApiKey);
+            return !string.IsNullOrWhiteSpace(activeConfig.ApiKey) || activeConfig.IsKeySecured;
         }
     }
 }
