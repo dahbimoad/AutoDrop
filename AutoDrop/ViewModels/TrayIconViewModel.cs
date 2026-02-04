@@ -78,6 +78,16 @@ public partial class TrayIconViewModel : Base.ViewModelBase
     }
 
     /// <summary>
+    /// Opens the AI Settings window.
+    /// </summary>
+    [RelayCommand]
+    private void OpenAiSettings()
+    {
+        _logger.LogDebug("Opening AI Settings");
+        _windowService.ShowAiSettings();
+    }
+
+    /// <summary>
     /// Exits the application.
     /// </summary>
     [RelayCommand]

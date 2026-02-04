@@ -288,11 +288,17 @@ The following technical improvements were implemented to ensure production readi
 | US-14 | Custom Folder Organization | 🟡 High | ✅ Done |
 | US-15 | Copy Mode (Shift+Drop) | 🟢 Medium | ⏳ Not started |
 
-### Phase 4: Intelligence (v1.3)
+### Phase 4: Intelligence (v1.3) ✅ COMPLETE
 
 | ID | Feature | Priority | Status |
 |----|---------|----------|--------|
-| US-16 | AI-Powered Categorization | 🟡 High | ⏳ Not started |
+| US-16 | AI-Powered Categorization | 🟡 High | ✅ Done (Multi-Provider) |
+| US-16a | Multi-Provider AI Support | 🟡 High | ✅ Done |
+| US-16b | Vision/Image Analysis | 🟡 High | ✅ Done |
+| US-16c | Document/PDF Analysis | 🟡 High | ✅ Done |
+| US-16d | Smart File Renaming | 🟢 Medium | ✅ Done |
+| US-16e | Local AI (Ollama) | 🟢 Medium | ✅ Done |
+| US-16f | Secure API Key Storage | 🔴 Critical | ✅ Done (DPAPI) |
 
 ### Phase 5: Distribution (v2.0) ✅ COMPLETE
 
@@ -578,43 +584,79 @@ As a power user, I want to hold Shift while dropping files to copy instead of mo
 
 ---
 
-### US-16: AI-Powered Categorization
+### US-16: AI-Powered Categorization ⭐ ✅ COMPLETE
 
 **Story:**  
 As a user, I want the app to analyze file content (not just extensions) to suggest better destinations, so invoices go to "Finances" and photos of receipts go to "Receipts".
 
 **Acceptance Criteria:**
-- [ ] Integrate ML model for content analysis
-- [ ] Analyze text files (PDF, DOCX) for keywords:
-  - "Invoice" → suggest Finance folder
-  - "Receipt" → suggest Receipts folder
-  - "Tax" → suggest Taxes folder
-- [ ] Analyze images with OCR:
-  - Receipts → detect dates, amounts
-  - Screenshots → detect context
-- [ ] Show AI confidence level in suggestions
-- [ ] User can enable/disable AI in settings
-- [ ] Privacy: All processing happens locally (no cloud)
-- [ ] Fallback to extension-based if AI fails
+- [x] Integrate AI providers for content analysis (Multi-provider architecture)
+- [x] Analyze text files (PDF, TXT, JSON, XML, CSV, MD, LOG) for content
+- [x] Analyze images with Vision AI (photos, screenshots, receipts)
+- [x] Show AI confidence level in suggestions
+- [x] User can enable/disable AI in settings
+- [x] Privacy option: Local AI with Ollama (no cloud)
+- [x] Fallback to extension-based if AI fails or disabled
+- [x] Smart file renaming suggestions based on content
+- [x] Match to user's existing custom folders (priority over new folders)
+- [x] Folder organization by AI content analysis
 
-**Technology:**
-- **OCR:** Tesseract.NET (local)
-- **Text Analysis:** ML.NET (local classification)
-- **Model:** Custom-trained on document categories
+**Technology - Multi-Provider Architecture:**
 
-**Settings:**
+| Provider | Models | Vision | PDF | Notes |
+|----------|--------|--------|-----|-------|
+| **OpenAI** | GPT-4o, GPT-4o-mini, GPT-4-turbo | ✅ | ❌ | Best overall quality |
+| **Claude** | Claude 3.5 Sonnet/Haiku, Claude 3 Opus | ✅ | ✅ | Best for documents |
+| **Gemini** | Gemini 1.5 Pro/Flash, Gemini 2.0 Flash | ✅ | ✅ | Huge context (2M tokens) |
+| **Groq** | Llama 3.3 70B, 3.2 90B Vision, Mixtral | ✅ | ❌ | Ultra-fast inference |
+| **Ollama** | LLaVA 7B/13B, Llama 3.2, Mistral, Qwen 2.5 | ✅ | ❌ | 100% local/private |
+
+**Security:**
+- API keys stored securely using Windows DPAPI encryption
+- Credentials stored in hidden folder: `%AppData%\AutoDrop\Credentials\`
+- Keys never stored in plaintext in settings.json
+
+**Settings Model (AiSettings):**
 ```json
 {
-  "aiEnabled": true,
-  "aiConfidenceThreshold": 0.7,
-  "analyzeTextFiles": true,
-  "analyzeImages": true,
-  "ocrLanguage": "en"
+  "enabled": true,
+  "disclaimerAccepted": true,
+  "activeProvider": "Groq",
+  "providerConfigs": [
+    {
+      "provider": "Groq",
+      "isKeySecured": true,
+      "textModel": "llama-3.3-70b-versatile",
+      "visionModel": "llama-3.2-90b-vision-preview",
+      "isValidated": true
+    }
+  ],
+  "confidenceThreshold": 0.7,
+  "enableSmartRename": true,
+  "enableVisionAnalysis": true,
+  "enableDocumentAnalysis": true,
+  "maxFileSizeMb": 10,
+  "defaultNewFolderBasePath": ""
+}
+```
+
+**AI Analysis Result:**
+```json
+{
+  "success": true,
+  "category": "Invoice",
+  "subcategory": "Utility Bills",
+  "suggestedName": "electricity_bill_january_2026",
+  "description": "Electric utility bill from January 2026",
+  "confidence": 0.92,
+  "contentType": "Document",
+  "matchedFolderId": "guid-of-custom-folder",
+  "suggestedNewFolderPath": "Documents/Bills"
 }
 ```
 
 **Priority:** 🟡 High - Competitive advantage  
-**Estimated Effort:** 7 days
+**Status:** ✅ Complete - Implemented with multi-provider support
 
 ---
 
@@ -774,8 +816,11 @@ public class OperationHistory
 
 **2. New Services:**
 - `IHistoryService` - Track and manage operation history
-- `IDuplicateDetectionService` - Hash comparison and duplicate handling
-- `IAICategorizationService` - ML-powered file analysis
+- `IDuplicateDetectionService` - Hash comparison and duplicate handling ✅ Done
+- `IAiService` - Multi-provider AI orchestration (replaces IAICategorizationService) ✅ Done
+- `IAiProvider` - Provider interface (OpenAI, Claude, Gemini, Groq, Ollama) ✅ Done
+- `ICredentialService` - Secure API key storage with DPAPI ✅ Done
+- `IFolderOrganizationService` - AI-powered folder organization ✅ Done
 - `IUpdateService` - Check for updates and auto-install
 
 **3. Storage Files:**

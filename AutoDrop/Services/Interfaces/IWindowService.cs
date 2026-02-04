@@ -45,4 +45,15 @@ public interface IWindowService
     /// <param name="filter">File filter.</param>
     /// <returns>Selected file path, or null if cancelled.</returns>
     string? ShowOpenFileDialog(string? title = null, string? filter = null);
+
+    /// <summary>
+    /// Opens the AI Settings window as a dialog.
+    /// </summary>
+    void ShowAiSettings();
+
+    /// <summary>
+    /// Opens the Folder Organization window for organizing files within a folder.
+    /// </summary>
+    /// <param name="folderPath">The path to the folder to organize.</param>
+    void ShowFolderOrganization(string folderPath);
 }

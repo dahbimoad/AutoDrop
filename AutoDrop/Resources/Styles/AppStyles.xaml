@@ -5,10 +5,13 @@
     <!-- Converters -->
     <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
     <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+    <converters:InverseBoolConverter x:Key="InverseBoolConverter"/>
+    <converters:BoolToOpacityConverter x:Key="BoolToOpacityConverter"/>
     <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
     <converters:InverseCountToVisibilityConverter x:Key="InverseCountToVisibilityConverter"/>
     <converters:PathParentConverter x:Key="PathParentConverter"/>
     <converters:PathFolderNameConverter x:Key="PathFolderNameConverter"/>
+    <converters:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibilityConverter"/>
 
     <!-- Drop Zone Styles -->
     <Style x:Key="DropZoneBorderStyle" TargetType="Border">

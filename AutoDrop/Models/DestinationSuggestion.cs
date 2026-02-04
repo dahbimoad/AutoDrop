@@ -34,4 +34,20 @@ public sealed class DestinationSuggestion
     /// Confidence score (0-100) for this suggestion.
     /// </summary>
     public int Confidence { get; set; }
+
+    /// <summary>
+    /// Whether this suggestion comes from AI analysis.
+    /// </summary>
+    public bool IsAiSuggestion { get; set; }
+
+    /// <summary>
+    /// Whether this AI suggestion creates a new folder (vs matching existing).
+    /// When true, user can browse to change location before moving.
+    /// </summary>
+    public bool IsNewFolder { get; set; }
+
+    /// <summary>
+    /// The suggested folder name for new folders (without base path).
+    /// </summary>
+    public string? SuggestedFolderName { get; set; }
 }

@@ -119,4 +119,39 @@ public sealed class WindowService : IWindowService
 
         return dialog.ShowDialog() == true ? dialog.FileName : null;
     }
+
+    /// <inheritdoc />
+    public void ShowAiSettings()
+    {
+        _logger.LogDebug("Opening AI Settings window");
+        try
+        {
+            var aiSettingsWindow = _serviceProvider.GetRequiredService<AiSettingsWindow>();
+            aiSettingsWindow.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to open AI Settings window");
+            throw;
+        }
+    }
+
+    /// <inheritdoc />
+    public void ShowFolderOrganization(string folderPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(folderPath);
+        
+        _logger.LogDebug("Opening Folder Organization window for {Folder}", folderPath);
+        try
+        {
+            var folderOrgWindow = _serviceProvider.GetRequiredService<FolderOrganizationWindow>();
+            folderOrgWindow.FolderPath = folderPath;
+            folderOrgWindow.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to open Folder Organization window");
+            throw;
+        }
+    }
 }

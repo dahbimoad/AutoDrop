@@ -41,25 +41,27 @@ public sealed class AppSettings
     /// Whether AI categorization is enabled.
     /// </summary>
     [JsonPropertyName("aiEnabled")]
+    [Obsolete("Use AiSettings.Enabled instead")]
     public bool AiEnabled { get; set; }
 
     /// <summary>
     /// Minimum confidence threshold for AI suggestions.
     /// </summary>
     [JsonPropertyName("aiConfidenceThreshold")]
+    [Obsolete("Use AiSettings.ConfidenceThreshold instead")]
     public double AiConfidenceThreshold { get; set; } = 0.7;
+
+    /// <summary>
+    /// AI-powered file analysis settings.
+    /// </summary>
+    [JsonPropertyName("aiSettings")]
+    public AiSettings AiSettings { get; set; } = new();
 
     /// <summary>
     /// Default operation mode (Move or Copy).
     /// </summary>
     [JsonPropertyName("defaultOperationMode")]
     public OperationMode DefaultOperationMode { get; set; } = OperationMode.Move;
-
-    /// <summary>
-    /// Whether to start with Windows.
-    /// </summary>
-    [JsonPropertyName("startWithWindows")]
-    public bool StartWithWindows { get; set; }
 
     /// <summary>
     /// Whether to minimize to tray on close.

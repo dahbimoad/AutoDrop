@@ -18,9 +18,23 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
     private readonly INotificationService _notificationService;
     private readonly IUndoService _undoService;
     private readonly IDuplicateDetectionService _duplicateDetectionService;
+    private readonly IAiService _aiService;
+    private readonly ISettingsService _settingsService;
+    private readonly IWindowService _windowService;
     private readonly ILogger<DropZoneViewModel> _logger;
     private bool _disposed;
     private DuplicateHandling _currentDuplicateHandling = DuplicateHandling.Ask;
+    
+    /// <summary>
+    /// Cancellation token source for AI analysis operations.
+    /// Cancelled when new items are dropped or state is reset.
+    /// </summary>
+    private CancellationTokenSource? _aiAnalysisCts;
+    
+    /// <summary>
+    /// The item currently being analyzed by AI. Used to prevent stale updates.
+    /// </summary>
+    private DroppedItem? _currentAiAnalysisItem;
 
     /// <summary>
     /// Threshold for showing batch operation dialog.
@@ -72,6 +86,18 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
     public ObservableCollection<ExtensionRuleSetting> ExtensionRuleSettings { get; } = [];
 
     /// <summary>
+    /// AI analysis result for the current item (if available).
+    /// </summary>
+    [ObservableProperty]
+    private AiAnalysisResult? _aiAnalysisResult;
+
+    /// <summary>
+    /// Whether AI is currently analyzing the file.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isAiAnalyzing;
+
+    /// <summary>
     /// Event raised when batch operation dialog should be shown.
     /// </summary>
     public event EventHandler<BatchOperationRequestedEventArgs>? BatchOperationRequested;
@@ -88,6 +114,9 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
         INotificationService notificationService,
         IUndoService undoService,
         IDuplicateDetectionService duplicateDetectionService,
+        IAiService aiService,
+        ISettingsService settingsService,
+        IWindowService windowService,
         ILogger<DropZoneViewModel> logger)
     {
         _fileOperationService = fileOperationService ?? throw new ArgumentNullException(nameof(fileOperationService));
@@ -96,6 +125,9 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
         _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
         _undoService = undoService ?? throw new ArgumentNullException(nameof(undoService));
         _duplicateDetectionService = duplicateDetectionService ?? throw new ArgumentNullException(nameof(duplicateDetectionService));
+        _aiService = aiService ?? throw new ArgumentNullException(nameof(aiService));
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _windowService = windowService ?? throw new ArgumentNullException(nameof(windowService));
         _logger = logger;
 
         // Subscribe to undo events
@@ -159,6 +191,7 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
     /// <summary>
     /// Handles files being dropped onto the drop zone.
     /// Automatically moves files if an auto-move rule exists.
+    /// For single folder drops, opens the folder organization window.
     /// </summary>
     [RelayCommand]
     private async Task HandleDropAsync(string[] paths)
@@ -167,6 +200,14 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
             return;
 
         _logger.LogInformation("Files dropped: {Count} items", paths.Length);
+
+        // Check if a single folder was dropped - show folder organization window
+        if (paths.Length == 1 && Directory.Exists(paths[0]))
+        {
+            _logger.LogInformation("Single folder dropped, opening folder organization: {Folder}", paths[0]);
+            _windowService.ShowFolderOrganization(paths[0]);
+            return;
+        }
 
         DroppedItems.Clear();
         Suggestions.Clear();
@@ -582,6 +623,7 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
     {
         _logger.LogDebug("Loading suggestions for: {ItemName}", item.Name);
         
+        // Load regular suggestions first
         var suggestions = await _suggestionService.GetSuggestionsAsync(item);
         
         Suggestions.Clear();
@@ -592,17 +634,225 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
 
         _logger.LogDebug("Loaded {Count} suggestions", Suggestions.Count);
         StatusText = $"{item.Name} ({item.Category})";
+
+        // Cancel any previous AI analysis and start new one
+        CancelAiAnalysis();
+        _aiAnalysisCts = new CancellationTokenSource();
+        _currentAiAnalysisItem = item;
+        
+        // Run AI analysis with proper cancellation support
+        _ = RunAiAnalysisAsync(item, _aiAnalysisCts.Token);
+    }
+
+    /// <summary>
+    /// Cancels any ongoing AI analysis operation.
+    /// </summary>
+    private void CancelAiAnalysis()
+    {
+        if (_aiAnalysisCts != null)
+        {
+            _aiAnalysisCts.Cancel();
+            _aiAnalysisCts.Dispose();
+            _aiAnalysisCts = null;
+        }
+        _currentAiAnalysisItem = null;
+    }
+
+    /// <summary>
+    /// Runs AI analysis on the dropped item and adds AI-based suggestions.
+    /// Prioritizes matching to user's existing custom folders before suggesting new ones.
+    /// </summary>
+    private async Task RunAiAnalysisAsync(DroppedItem item, CancellationToken ct)
+    {
+        try
+        {
+            // Check cancellation early
+            ct.ThrowIfCancellationRequested();
+            
+            // Check if AI is enabled
+            var settings = await _settingsService.GetSettingsAsync();
+            if (!settings.AiSettings.IsFullyConfigured)
+            {
+                _logger.LogDebug("[AI] AI not configured, skipping analysis");
+                return;
+            }
+
+            // Only analyze files, not directories
+            if (item.IsDirectory)
+            {
+                _logger.LogDebug("[AI] Skipping AI analysis for directory");
+                return;
+            }
+
+            // THREAD SAFETY: Update UI on dispatcher
+            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                IsAiAnalyzing = true;
+                AiAnalysisResult = null;
+            });
+            
+            _logger.LogInformation("[AI] 🚀 Starting AI analysis for: {Name}", item.Name);
+            
+            // Check cancellation before expensive operation
+            ct.ThrowIfCancellationRequested();
+            
+            // Get custom folders to pass to AI for matching
+            var customFolders = await _settingsService.GetCustomFoldersAsync();
+            _logger.LogDebug("[AI] Passing {Count} custom folders to AI for matching", customFolders.Count);
+            
+            var result = await _aiService.AnalyzeFileAsync(item.FullPath, customFolders, ct);
+            
+            // STALE UPDATE CHECK: Verify this is still the current item being analyzed
+            if (_currentAiAnalysisItem != item || ct.IsCancellationRequested)
+            {
+                _logger.LogDebug("[AI] Analysis result discarded - item changed or cancelled");
+                return;
+            }
+            
+            // THREAD SAFETY: Update UI on dispatcher
+            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                // Double-check we're still analyzing the same item
+                if (_currentAiAnalysisItem != item)
+                {
+                    _logger.LogDebug("[AI] Discarding stale AI result - current item changed");
+                    return;
+                }
+                
+                AiAnalysisResult = result;
+                IsAiAnalyzing = false;
+                
+                if (result.Success)
+                {
+                    // Update status with AI info
+                    var aiInfo = result.SuggestedName != null 
+                        ? $"✨ AI: {result.Category} • Rename: {result.SuggestedName}" 
+                        : $"✨ AI: {result.Category}";
+                    StatusText = aiInfo;
+                    
+                    // Check confidence threshold
+                    if (result.Confidence < settings.AiSettings.ConfidenceThreshold)
+                    {
+                        _logger.LogDebug("[AI] Confidence {Confidence:P0} below threshold {Threshold:P0}", 
+                            result.Confidence, settings.AiSettings.ConfidenceThreshold);
+                        return;
+                    }
+
+                    // PRIORITY 1: If AI matched to an existing custom folder, use it
+                    if (result.HasMatchedFolder && !string.IsNullOrEmpty(result.MatchedFolderPath))
+                    {
+                        var matchedSuggestion = new DestinationSuggestion
+                        {
+                            DisplayName = $"✨ {result.MatchedFolderName ?? result.Category}",
+                            FullPath = NormalizePath(result.MatchedFolderPath),
+                            IsRecommended = true,
+                            IsFromRule = false,
+                            Confidence = (int)(result.Confidence * 100),
+                            IsAiSuggestion = true,
+                            IsNewFolder = false
+                        };
+                        
+                        Suggestions.Insert(0, matchedSuggestion);
+                        
+                        _logger.LogInformation("[AI] ✅ Matched to existing folder: {FolderName} at {Path} (Confidence: {Confidence:P0})", 
+                            result.MatchedFolderName, result.MatchedFolderPath, result.Confidence);
+                    }
+                    // PRIORITY 2: If no match, suggest a new folder path
+                    else if (!string.IsNullOrEmpty(result.Category))
+                    {
+                        // Use user's configured base path for new folders
+                        var basePath = settings.AiSettings.ResolvedNewFolderBasePath;
+                        
+                        // Sanitize the category name for file system
+                        var safeFolderName = SanitizeFolderName(result.Category);
+                        var aiSuggestedPath = Path.Combine(basePath, safeFolderName);
+                        
+                        var aiSuggestion = new DestinationSuggestion
+                        {
+                            DisplayName = $"📁 Create: {result.Category}",
+                            FullPath = aiSuggestedPath,
+                            IsRecommended = true,
+                            IsFromRule = false,
+                            Confidence = (int)(result.Confidence * 100),
+                            IsAiSuggestion = true,
+                            IsNewFolder = true,
+                            SuggestedFolderName = safeFolderName
+                        };
+                        
+                        Suggestions.Insert(0, aiSuggestion);
+                        
+                        _logger.LogInformation("[AI] ✅ Suggesting new folder: {Category} at {Path} (Confidence: {Confidence:P0})", 
+                            result.Category, aiSuggestedPath, result.Confidence);
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("[AI] Analysis failed: {Error}", result.Error);
+                }
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when analysis is cancelled - not an error
+            _logger.LogDebug("[AI] Analysis cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[AI] Error during AI analysis");
+        }
+        finally
+        {
+            // THREAD SAFETY: Always update UI on dispatcher
+            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                // Only clear analyzing state if this is still the active analysis
+                if (_currentAiAnalysisItem == item)
+                {
+                    IsAiAnalyzing = false;
+                }
+            });
+        }
     }
 
     private void ResetState()
     {
+        // Cancel any pending AI analysis
+        CancelAiAnalysis();
+        
         DroppedItems.Clear();
         Suggestions.Clear();
         ExtensionRuleSettings.Clear();
         CurrentItem = null;
         HasFilesOnly = false;
         IsDragOver = false;
+        IsAiAnalyzing = false;
+        AiAnalysisResult = null;
         StatusText = "Drop files here";
+    }
+
+    /// <summary>
+    /// Normalizes a path by replacing forward slashes with the system's directory separator.
+    /// </summary>
+    private static string NormalizePath(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return path;
+        return path.Replace('/', Path.DirectorySeparatorChar)
+                   .Replace('\\', Path.DirectorySeparatorChar);
+    }
+
+    /// <summary>
+    /// Sanitizes a folder name by removing invalid characters.
+    /// </summary>
+    private static string SanitizeFolderName(string folderName)
+    {
+        if (string.IsNullOrWhiteSpace(folderName)) return "Uncategorized";
+        
+        var invalidChars = Path.GetInvalidFileNameChars();
+        var sanitized = new string(folderName
+            .Where(c => !invalidChars.Contains(c))
+            .ToArray());
+        
+        return string.IsNullOrWhiteSpace(sanitized) ? "Uncategorized" : sanitized.Trim();
     }
 
     /// <summary>
@@ -611,6 +861,9 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
     public void Dispose()
     {
         if (_disposed) return;
+        
+        // Cancel any pending AI analysis
+        CancelAiAnalysis();
         
         _undoService.UndoAvailable -= OnUndoAvailable;
         _undoService.UndoExecuted -= OnUndoExecuted;
