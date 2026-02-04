@@ -41,6 +41,8 @@ AutoDrop is a lightweight Windows utility that makes file organization effortles
 - **📦 Batch Operations** — Drop multiple files and organize them all at once
 - **🔔 System Tray** — Runs quietly in the background, always accessible
 - **🎨 Modern UI** — Clean Windows 11-style Fluent Design interface
+- **🤖 AI-Powered Analysis** — Content-based file categorization and smart renaming
+- **🔐 Privacy-First AI** — Choose from cloud providers or run 100% locally with Ollama
 
 ---
 
@@ -91,6 +93,38 @@ AutoDrop automatically categorizes files and suggests appropriate destinations:
 | 💻 Code | `.js` `.py` `.cs` `.html` `.css` `.json` | Projects |
 
 *You can customize these rules in Settings.*
+
+---
+
+## 🤖 AI-Powered Features
+
+AutoDrop includes powerful AI capabilities for content-based file organization:
+
+### Supported AI Providers
+
+| Provider | Models | Vision | PDF | Notes |
+|----------|--------|--------|-----|-------|
+| **OpenAI** | GPT-4o, GPT-4o-mini | ✅ | ❌ | Best quality |
+| **Claude** | Claude 3.5 Sonnet, Haiku, Opus | ✅ | ✅ | Best for documents |
+| **Gemini** | Gemini 1.5 Pro/Flash, 2.0 Flash | ✅ | ✅ | Huge context window |
+| **Groq** | Llama 3.3 70B, 3.2 90B Vision | ✅ | ❌ | Ultra-fast inference |
+| **Ollama** | LLaVA, Llama 3.2, Mistral | ✅ | ❌ | 100% local/private |
+
+### AI Capabilities
+
+- **🖼️ Image Analysis** — Analyzes image content (photos, screenshots, receipts) to suggest categories
+- **📄 Document Analysis** — Reads PDFs and text files to categorize by content
+- **✨ Smart Rename** — Suggests descriptive filenames based on file content
+- **📂 Folder Matching** — AI prioritizes your existing custom folders over creating new ones
+- **🗂️ Folder Organization** — Organize entire folders using AI content analysis
+- **🔐 Secure Storage** — API keys encrypted with Windows DPAPI
+
+### Privacy Options
+
+- **Cloud Providers** — OpenAI, Claude, Gemini, Groq (require API key, data sent to cloud)
+- **Local with Ollama** — Run AI 100% on your machine, no data leaves your computer
+
+*Configure AI in Settings → AI Settings*
 
 ---
 
