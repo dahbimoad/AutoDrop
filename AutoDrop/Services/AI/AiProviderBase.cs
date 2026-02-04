@@ -57,6 +57,7 @@ public abstract class AiProviderBase : IAiProvider
     public abstract Task<bool> ValidateAsync(CancellationToken cancellationToken = default);
     public abstract Task<AiAnalysisResult> AnalyzeImageAsync(string imagePath, IReadOnlyList<CustomFolder>? customFolders = null, CancellationToken cancellationToken = default);
     public abstract Task<AiAnalysisResult> AnalyzeDocumentAsync(string documentPath, IReadOnlyList<CustomFolder>? customFolders = null, CancellationToken cancellationToken = default);
+    public abstract Task<string> SendTextPromptAsync(string prompt, CancellationToken cancellationToken = default);
 
     protected async Task<string> SendRequestAsync(string url, object requestBody, CancellationToken ct)
     {

@@ -78,6 +78,19 @@ public sealed class AiService : IAiService, IDisposable
         }
     }
 
+    /// <inheritdoc />
+    public async Task<bool> IsAvailableAsync(CancellationToken ct = default)
+    {
+        if (!IsCacheValid)
+        {
+            await RefreshAvailabilityAsync(ct).ConfigureAwait(false);
+        }
+        
+        return _cachedSettings?.Enabled == true && 
+               _cachedSettings.DisclaimerAccepted && 
+               _activeProvider != null;
+    }
+
     /// <summary>
     /// Refreshes the availability check asynchronously.
     /// </summary>
@@ -283,6 +296,24 @@ public sealed class AiService : IAiService, IDisposable
         }
 
         return await _activeProvider.AnalyzeDocumentAsync(documentPath, customFolders, ct);
+    }
+
+    /// <inheritdoc />
+    public async Task<string> AnalyzeTextAsync(string prompt, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
+
+        if (_activeProvider == null)
+        {
+            await InitializeActiveProviderAsync();
+        }
+
+        if (_activeProvider == null)
+        {
+            throw new InvalidOperationException("No AI provider configured.");
+        }
+
+        return await _activeProvider.SendTextPromptAsync(prompt, ct);
     }
 
     /// <summary>

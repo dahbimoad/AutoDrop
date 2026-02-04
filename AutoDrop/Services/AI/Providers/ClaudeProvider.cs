@@ -199,4 +199,30 @@ public sealed class ClaudeProvider : AiProviderBase
             return AiAnalysisResult.Failed("Failed to parse AI response.");
         }
     }
+
+    public override async Task<string> SendTextPromptAsync(string prompt, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
+        if (string.IsNullOrWhiteSpace(Config?.ApiKey))
+            throw new InvalidOperationException("API key not configured.");
+
+        var model = Config.TextModel.Length > 0 ? Config.TextModel : "claude-3-5-haiku-20241022";
+        var requestBody = new
+        {
+            model,
+            messages = new[] { new { role = "user", content = prompt } },
+            max_tokens = 100
+        };
+
+        var response = await SendClaudeRequestAsync(requestBody, ct).ConfigureAwait(false);
+        return ExtractTextFromClaudeResponse(response);
+    }
+
+    private static string ExtractTextFromClaudeResponse(string apiResponse)
+    {
+        using var doc = JsonDocument.Parse(apiResponse);
+        var contentArray = doc.RootElement.GetProperty("content");
+        if (contentArray.GetArrayLength() == 0) return string.Empty;
+        return contentArray[0].GetProperty("text").GetString() ?? string.Empty;
+    }
 }
