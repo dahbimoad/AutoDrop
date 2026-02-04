@@ -20,6 +20,7 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
     private readonly IDuplicateDetectionService _duplicateDetectionService;
     private readonly IAiService _aiService;
     private readonly ISettingsService _settingsService;
+    private readonly IWindowService _windowService;
     private readonly ILogger<DropZoneViewModel> _logger;
     private bool _disposed;
     private DuplicateHandling _currentDuplicateHandling = DuplicateHandling.Ask;
@@ -115,6 +116,7 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
         IDuplicateDetectionService duplicateDetectionService,
         IAiService aiService,
         ISettingsService settingsService,
+        IWindowService windowService,
         ILogger<DropZoneViewModel> logger)
     {
         _fileOperationService = fileOperationService ?? throw new ArgumentNullException(nameof(fileOperationService));
@@ -125,6 +127,7 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
         _duplicateDetectionService = duplicateDetectionService ?? throw new ArgumentNullException(nameof(duplicateDetectionService));
         _aiService = aiService ?? throw new ArgumentNullException(nameof(aiService));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _windowService = windowService ?? throw new ArgumentNullException(nameof(windowService));
         _logger = logger;
 
         // Subscribe to undo events
@@ -188,6 +191,7 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
     /// <summary>
     /// Handles files being dropped onto the drop zone.
     /// Automatically moves files if an auto-move rule exists.
+    /// For single folder drops, opens the folder organization window.
     /// </summary>
     [RelayCommand]
     private async Task HandleDropAsync(string[] paths)
@@ -196,6 +200,14 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
             return;
 
         _logger.LogInformation("Files dropped: {Count} items", paths.Length);
+
+        // Check if a single folder was dropped - show folder organization window
+        if (paths.Length == 1 && Directory.Exists(paths[0]))
+        {
+            _logger.LogInformation("Single folder dropped, opening folder organization: {Folder}", paths[0]);
+            _windowService.ShowFolderOrganization(paths[0]);
+            return;
+        }
 
         DroppedItems.Clear();
         Suggestions.Clear();

@@ -135,4 +135,23 @@ public sealed class WindowService : IWindowService
             throw;
         }
     }
+
+    /// <inheritdoc />
+    public void ShowFolderOrganization(string folderPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(folderPath);
+        
+        _logger.LogDebug("Opening Folder Organization window for {Folder}", folderPath);
+        try
+        {
+            var folderOrgWindow = _serviceProvider.GetRequiredService<FolderOrganizationWindow>();
+            folderOrgWindow.FolderPath = folderPath;
+            folderOrgWindow.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to open Folder Organization window");
+            throw;
+        }
+    }
 }

@@ -50,4 +50,10 @@ public interface IWindowService
     /// Opens the AI Settings window as a dialog.
     /// </summary>
     void ShowAiSettings();
+
+    /// <summary>
+    /// Opens the Folder Organization window for organizing files within a folder.
+    /// </summary>
+    /// <param name="folderPath">The path to the folder to organize.</param>
+    void ShowFolderOrganization(string folderPath);
 }

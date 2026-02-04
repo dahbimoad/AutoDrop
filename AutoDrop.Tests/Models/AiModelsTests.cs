@@ -5,7 +5,7 @@ namespace AutoDrop.Tests.Models;
 
 /// <summary>
 /// Unit tests for AI-related models.
-/// Tests configuration, settings, and result classes.
+/// Tests configuration, settings, result classes, and edge cases.
 /// </summary>
 public sealed class AiModelsTests
 {
@@ -21,6 +21,25 @@ public sealed class AiModelsTests
         Enum.IsDefined(AiProvider.Gemini).Should().BeTrue();
         Enum.IsDefined(AiProvider.Groq).Should().BeTrue();
         Enum.IsDefined(AiProvider.Ollama).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(AiProvider.OpenAI, "OpenAI")]
+    [InlineData(AiProvider.Claude, "Claude")]
+    [InlineData(AiProvider.Gemini, "Gemini")]
+    [InlineData(AiProvider.Groq, "Groq")]
+    [InlineData(AiProvider.Ollama, "Ollama")]
+    public void AiProvider_ToString_ReturnsCorrectName(AiProvider provider, string expectedName)
+    {
+        // Assert
+        provider.ToString().Should().Be(expectedName);
+    }
+
+    [Fact]
+    public void AiProvider_InvalidValue_IsNotDefined()
+    {
+        // Assert
+        Enum.IsDefined((AiProvider)99).Should().BeFalse();
     }
 
     #endregion
@@ -40,6 +59,7 @@ public sealed class AiModelsTests
         config.VisionModel.Should().BeEmpty();
         config.IsValidated.Should().BeFalse();
         config.LastValidated.Should().BeNull();
+        config.IsKeySecured.Should().BeFalse();
     }
 
     [Fact]
@@ -55,7 +75,8 @@ public sealed class AiModelsTests
             TextModel = "gpt-4o",
             VisionModel = "gpt-4o",
             IsValidated = true,
-            LastValidated = now
+            LastValidated = now,
+            IsKeySecured = true
         };
 
         // Assert
@@ -66,6 +87,32 @@ public sealed class AiModelsTests
         config.VisionModel.Should().Be("gpt-4o");
         config.IsValidated.Should().BeTrue();
         config.LastValidated.Should().Be(now);
+        config.IsKeySecured.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AiProviderConfig_CredentialKey_GeneratesCorrectFormat()
+    {
+        // Arrange
+        var config = new AiProviderConfig { Provider = AiProvider.OpenAI };
+
+        // Assert
+        config.CredentialKey.Should().Be("AutoDrop_OpenAI_ApiKey");
+    }
+
+    [Theory]
+    [InlineData(AiProvider.OpenAI, "AutoDrop_OpenAI_ApiKey")]
+    [InlineData(AiProvider.Claude, "AutoDrop_Claude_ApiKey")]
+    [InlineData(AiProvider.Gemini, "AutoDrop_Gemini_ApiKey")]
+    [InlineData(AiProvider.Groq, "AutoDrop_Groq_ApiKey")]
+    [InlineData(AiProvider.Ollama, "AutoDrop_Ollama_ApiKey")]
+    public void AiProviderConfig_CredentialKey_CorrectForAllProviders(AiProvider provider, string expectedKey)
+    {
+        // Arrange
+        var config = new AiProviderConfig { Provider = provider };
+
+        // Assert
+        config.CredentialKey.Should().Be(expectedKey);
     }
 
     #endregion
@@ -125,6 +172,19 @@ public sealed class AiModelsTests
         model.Description.Should().Be("Vision-capable model");
     }
 
+    [Fact]
+    public void AiModelInfo_IsRecord_SupportsEquality()
+    {
+        // Arrange
+        var model1 = new AiModelInfo { Id = "gpt-4o", DisplayName = "GPT-4o" };
+        var model2 = new AiModelInfo { Id = "gpt-4o", DisplayName = "GPT-4o" };
+        var model3 = new AiModelInfo { Id = "gpt-4o-mini", DisplayName = "GPT-4o Mini" };
+
+        // Assert
+        model1.Should().Be(model2);
+        model1.Should().NotBe(model3);
+    }
+
     #endregion
 
     #region AiProviderInfo Tests
@@ -172,6 +232,46 @@ public sealed class AiModelsTests
         providerInfo.DefaultBaseUrl.Should().Be("http://localhost:11434");
     }
 
+    [Fact]
+    public void AiProviderInfo_IconGlyph_HasDefault()
+    {
+        // Arrange & Act
+        var providerInfo = new AiProviderInfo
+        {
+            Provider = AiProvider.OpenAI,
+            DisplayName = "Test",
+            Description = "Test provider",
+            Models = []
+        };
+
+        // Assert - Default icon glyph
+        providerInfo.IconGlyph.Should().NotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public void AiProviderInfo_IsRecord_SupportsEquality()
+    {
+        // Arrange
+        var models = new List<AiModelInfo> { new() { Id = "test", DisplayName = "Test" } };
+        var info1 = new AiProviderInfo
+        {
+            Provider = AiProvider.OpenAI,
+            DisplayName = "OpenAI",
+            Description = "Test",
+            Models = models
+        };
+        var info2 = new AiProviderInfo
+        {
+            Provider = AiProvider.OpenAI,
+            DisplayName = "OpenAI",
+            Description = "Test",
+            Models = models
+        };
+
+        // Assert
+        info1.Should().Be(info2);
+    }
+
     #endregion
 
     #region AiSettings Tests
@@ -192,6 +292,7 @@ public sealed class AiModelsTests
         settings.EnableDocumentAnalysis.Should().BeTrue();
         settings.MaxFileSizeMb.Should().Be(10);
         settings.ProviderConfigs.Should().BeEmpty();
+        settings.DefaultNewFolderBasePath.Should().BeEmpty();
     }
 
     [Fact]
@@ -372,6 +473,331 @@ public sealed class AiModelsTests
         Enum.IsDefined(AiContentType.Image).Should().BeTrue();
         Enum.IsDefined(AiContentType.Document).Should().BeTrue();
         Enum.IsDefined(AiContentType.Code).Should().BeTrue();
+        Enum.IsDefined(AiContentType.Archive).Should().BeTrue();
+        Enum.IsDefined(AiContentType.Media).Should().BeTrue();
+    }
+
+    [Fact]
+    public void AiContentType_Unknown_IsDefault()
+    {
+        // Arrange & Act
+        var result = new AiAnalysisResult();
+
+        // Assert
+        result.ContentType.Should().Be(AiContentType.Unknown);
+    }
+
+    #endregion
+
+    #region AiAnalysisResult Matched Folder Tests
+
+    [Fact]
+    public void AiAnalysisResult_HasMatchedFolder_WhenIdIsSet_ReturnsTrue()
+    {
+        // Arrange
+        var result = new AiAnalysisResult
+        {
+            Success = true,
+            MatchedFolderId = "folder-123"
+        };
+
+        // Assert
+        result.HasMatchedFolder.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AiAnalysisResult_HasMatchedFolder_WhenIdIsEmpty_ReturnsFalse()
+    {
+        // Arrange
+        var result = new AiAnalysisResult
+        {
+            Success = true,
+            MatchedFolderId = string.Empty
+        };
+
+        // Assert
+        result.HasMatchedFolder.Should().BeFalse();
+    }
+
+    [Fact]
+    public void AiAnalysisResult_HasMatchedFolder_WhenIdIsNull_ReturnsFalse()
+    {
+        // Arrange
+        var result = new AiAnalysisResult
+        {
+            Success = true,
+            MatchedFolderId = null
+        };
+
+        // Assert
+        result.HasMatchedFolder.Should().BeFalse();
+    }
+
+    [Fact]
+    public void AiAnalysisResult_MatchedFolderProperties_SetCorrectly()
+    {
+        // Arrange & Act
+        var result = new AiAnalysisResult
+        {
+            Success = true,
+            MatchedFolderId = "folder-456",
+            MatchedFolderPath = @"C:\Documents\Work",
+            MatchedFolderName = "Work Documents"
+        };
+
+        // Assert
+        result.MatchedFolderId.Should().Be("folder-456");
+        result.MatchedFolderPath.Should().Be(@"C:\Documents\Work");
+        result.MatchedFolderName.Should().Be("Work Documents");
+        result.HasMatchedFolder.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AiAnalysisResult_SuggestedNewFolderPath_SetCorrectly()
+    {
+        // Arrange & Act
+        var result = new AiAnalysisResult
+        {
+            Success = true,
+            Category = "Travel",
+            SuggestedNewFolderPath = "Pictures/Travel/2024"
+        };
+
+        // Assert
+        result.SuggestedNewFolderPath.Should().Be("Pictures/Travel/2024");
+        result.HasMatchedFolder.Should().BeFalse();
+    }
+
+    #endregion
+
+    #region AiAnalysisResult Successful Factory Tests
+
+    [Fact]
+    public void AiAnalysisResult_Successful_CreatesSuccessfulResult()
+    {
+        // Act
+        var result = AiAnalysisResult.Successful("Receipts", 0.95, AiContentType.Document);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.Category.Should().Be("Receipts");
+        result.Confidence.Should().Be(0.95);
+        result.ContentType.Should().Be(AiContentType.Document);
+        result.Error.Should().BeNull();
+    }
+
+    [Fact]
+    public void AiAnalysisResult_Successful_ForImage_SetsContentType()
+    {
+        // Act
+        var result = AiAnalysisResult.Successful("Landscapes", 0.85, AiContentType.Image);
+
+        // Assert
+        result.ContentType.Should().Be(AiContentType.Image);
+    }
+
+    #endregion
+
+    #region AiSettings ResolvedNewFolderBasePath Tests
+
+    [Fact]
+    public void AiSettings_ResolvedNewFolderBasePath_WhenEmpty_ReturnsDocumentsFolder()
+    {
+        // Arrange
+        var settings = new AiSettings
+        {
+            DefaultNewFolderBasePath = string.Empty
+        };
+
+        // Act
+        var resolved = settings.ResolvedNewFolderBasePath;
+
+        // Assert
+        resolved.Should().Be(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
+    }
+
+    [Fact]
+    public void AiSettings_ResolvedNewFolderBasePath_WhenInvalidPath_ReturnsDocumentsFolder()
+    {
+        // Arrange
+        var settings = new AiSettings
+        {
+            DefaultNewFolderBasePath = @"Z:\NonExistent\Path\That\Does\Not\Exist"
+        };
+
+        // Act
+        var resolved = settings.ResolvedNewFolderBasePath;
+
+        // Assert
+        resolved.Should().Be(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
+    }
+
+    [Fact]
+    public void AiSettings_ResolvedNewFolderBasePath_WhenValidPath_ReturnsConfiguredPath()
+    {
+        // Arrange
+        var tempPath = Path.GetTempPath();
+        var settings = new AiSettings
+        {
+            DefaultNewFolderBasePath = tempPath
+        };
+
+        // Act
+        var resolved = settings.ResolvedNewFolderBasePath;
+
+        // Assert
+        resolved.Should().Be(tempPath);
+    }
+
+    #endregion
+
+    #region AiSettings ConfidenceThreshold Tests
+
+    [Theory]
+    [InlineData(0.0)]
+    [InlineData(0.5)]
+    [InlineData(0.7)]
+    [InlineData(1.0)]
+    public void AiSettings_ConfidenceThreshold_AcceptsValidValues(double threshold)
+    {
+        // Arrange & Act
+        var settings = new AiSettings { ConfidenceThreshold = threshold };
+
+        // Assert
+        settings.ConfidenceThreshold.Should().Be(threshold);
+    }
+
+    #endregion
+
+    #region AiSettings MaxFileSizeMb Tests
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(5)]
+    [InlineData(10)]
+    [InlineData(50)]
+    [InlineData(100)]
+    public void AiSettings_MaxFileSizeMb_AcceptsValidValues(int maxSize)
+    {
+        // Arrange & Act
+        var settings = new AiSettings { MaxFileSizeMb = maxSize };
+
+        // Assert
+        settings.MaxFileSizeMb.Should().Be(maxSize);
+    }
+
+    #endregion
+
+    #region AiSettings ProviderConfigs Tests
+
+    [Fact]
+    public void AiSettings_ProviderConfigs_CanAddMultipleProviders()
+    {
+        // Arrange & Act
+        var settings = new AiSettings
+        {
+            ProviderConfigs =
+            [
+                new AiProviderConfig { Provider = AiProvider.OpenAI, ApiKey = "key1" },
+                new AiProviderConfig { Provider = AiProvider.Claude, ApiKey = "key2" },
+                new AiProviderConfig { Provider = AiProvider.Groq, ApiKey = "key3" }
+            ]
+        };
+
+        // Assert
+        settings.ProviderConfigs.Should().HaveCount(3);
+        settings.ProviderConfigs.Should().Contain(c => c.Provider == AiProvider.OpenAI);
+        settings.ProviderConfigs.Should().Contain(c => c.Provider == AiProvider.Claude);
+        settings.ProviderConfigs.Should().Contain(c => c.Provider == AiProvider.Groq);
+    }
+
+    [Fact]
+    public void AiSettings_IsFullyConfigured_WithMismatchedActiveProvider_ReturnsFalse()
+    {
+        // Arrange - Active provider is OpenAI but only Groq is configured
+        var settings = new AiSettings
+        {
+            Enabled = true,
+            DisclaimerAccepted = true,
+            ActiveProvider = AiProvider.OpenAI,
+            ProviderConfigs = [
+                new AiProviderConfig
+                {
+                    Provider = AiProvider.Groq,
+                    ApiKey = "test-key"
+                }
+            ]
+        };
+
+        // Assert
+        settings.IsFullyConfigured.Should().BeFalse();
+    }
+
+    #endregion
+
+    #region JSON Serialization Attributes Tests
+
+    [Fact]
+    public void AiAnalysisResult_JsonIgnore_ExcludesMatchedFolderPath()
+    {
+        // This tests that JsonIgnore attributes are properly applied
+        var result = new AiAnalysisResult
+        {
+            Success = true,
+            MatchedFolderId = "id-123",
+            MatchedFolderPath = @"C:\Test",
+            MatchedFolderName = "Test Folder"
+        };
+
+        var json = System.Text.Json.JsonSerializer.Serialize(result);
+
+        // MatchedFolderPath and MatchedFolderName should be excluded
+        json.Should().NotContain("MatchedFolderPath");
+        json.Should().NotContain("MatchedFolderName");
+        json.Should().NotContain("HasMatchedFolder");
+        
+        // But matchedFolderId should be included
+        json.Should().Contain("matchedFolderId");
+    }
+
+    [Fact]
+    public void AiProviderConfig_JsonPropertyName_UsesCamelCase()
+    {
+        // Arrange
+        var config = new AiProviderConfig
+        {
+            Provider = AiProvider.OpenAI,
+            ApiKey = "test-key",
+            IsKeySecured = true
+        };
+
+        // Act
+        var json = System.Text.Json.JsonSerializer.Serialize(config);
+
+        // Assert - Should use camelCase
+        json.Should().Contain("\"provider\"");
+        json.Should().Contain("\"apiKey\"");
+        json.Should().Contain("\"isKeySecured\"");
+    }
+
+    [Fact]
+    public void AiSettings_JsonPropertyName_UsesCamelCase()
+    {
+        // Arrange
+        var settings = new AiSettings
+        {
+            Enabled = true,
+            DisclaimerAccepted = true,
+            EnableVisionAnalysis = false
+        };
+
+        // Act
+        var json = System.Text.Json.JsonSerializer.Serialize(settings);
+
+        // Assert
+        json.Should().Contain("\"enabled\"");
+        json.Should().Contain("\"disclaimerAccepted\"");
+        json.Should().Contain("\"enableVisionAnalysis\"");
     }
 
     #endregion

@@ -74,6 +74,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IWindowService, WindowService>();
         services.AddSingleton<IDuplicateDetectionService, DuplicateDetectionService>();
         services.AddSingleton<IBatchOperationService, BatchOperationService>();
+        services.AddSingleton<IFolderOrganizationService, FolderOrganizationService>();
 
         // AI Services (Multi-Provider)
         // Providers are registered as singletons and injected into AiService via IEnumerable<IAiProvider>
@@ -95,12 +96,14 @@ public static class ServiceCollectionExtensions
         services.AddTransient<RulesManagerViewModel>();
         services.AddTransient<BatchOperationViewModel>();
         services.AddTransient<AiSettingsViewModel>();
+        services.AddTransient<FolderOrganizationViewModel>();
 
         // Windows
         services.AddSingleton<DropZoneWindow>();
         services.AddTransient<RulesManagerWindow>();
         services.AddTransient<BatchOperationWindow>();
         services.AddTransient<AiSettingsWindow>();
+        services.AddTransient<FolderOrganizationWindow>();
 
         return services;
     }
