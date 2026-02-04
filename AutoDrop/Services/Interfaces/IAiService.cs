@@ -30,6 +30,12 @@ public interface IAiService
     bool IsAvailable { get; }
 
     /// <summary>
+    /// Asynchronously checks if AI features are available.
+    /// Unlike IsAvailable, this refreshes the cache if needed.
+    /// </summary>
+    Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Whether the current provider supports vision/image analysis.
     /// </summary>
     bool SupportsVision { get; }
@@ -85,6 +91,15 @@ public interface IAiService
     /// <param name="customFolders">User's custom folders to match against.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<AiAnalysisResult> AnalyzeDocumentAsync(string documentPath, IReadOnlyList<CustomFolder>? customFolders = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends a text prompt to the AI and returns the response.
+    /// Useful for simple text-based queries without file analysis.
+    /// </summary>
+    /// <param name="prompt">The text prompt to send.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The AI response text.</returns>
+    Task<string> AnalyzeTextAsync(string prompt, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets the configuration for a specific provider.

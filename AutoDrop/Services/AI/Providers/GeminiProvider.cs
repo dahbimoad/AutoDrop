@@ -193,4 +193,31 @@ public sealed class GeminiProvider : AiProviderBase
             return AiAnalysisResult.Failed("Failed to parse AI response.");
         }
     }
+
+    public override async Task<string> SendTextPromptAsync(string prompt, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
+        if (string.IsNullOrWhiteSpace(Config?.ApiKey))
+            throw new InvalidOperationException("API key not configured.");
+
+        var model = Config.TextModel.Length > 0 ? Config.TextModel : "gemini-1.5-flash";
+        var requestBody = new
+        {
+            contents = new[] { new { parts = new[] { new { text = prompt } } } },
+            generationConfig = new { maxOutputTokens = 100, temperature = 0.3 }
+        };
+
+        var response = await SendGeminiRequestAsync(model, requestBody, ct).ConfigureAwait(false);
+        return ExtractTextFromGeminiResponse(response);
+    }
+
+    private static string ExtractTextFromGeminiResponse(string apiResponse)
+    {
+        using var doc = JsonDocument.Parse(apiResponse);
+        var candidates = doc.RootElement.GetProperty("candidates");
+        if (candidates.GetArrayLength() == 0) return string.Empty;
+        var parts = candidates[0].GetProperty("content").GetProperty("parts");
+        if (parts.GetArrayLength() == 0) return string.Empty;
+        return parts[0].GetProperty("text").GetString() ?? string.Empty;
+    }
 }

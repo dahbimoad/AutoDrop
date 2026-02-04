@@ -1,3 +1,4 @@
+using System.Text.Json;
 using AutoDrop.Models;
 using Microsoft.Extensions.Logging;
 
@@ -129,5 +130,32 @@ public sealed class OpenAiProvider : AiProviderBase
             Logger.LogError(ex, "OpenAI document analysis failed");
             return AiAnalysisResult.Failed($"Analysis failed: {ex.Message}");
         }
+    }
+
+    public override async Task<string> SendTextPromptAsync(string prompt, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
+        if (string.IsNullOrWhiteSpace(Config?.ApiKey))
+            throw new InvalidOperationException("API key not configured.");
+
+        var model = Config.TextModel.Length > 0 ? Config.TextModel : "gpt-4o-mini";
+        var requestBody = new
+        {
+            model,
+            messages = new[] { new { role = "user", content = prompt } },
+            max_tokens = 100,
+            temperature = 0.3
+        };
+
+        var response = await SendRequestAsync(ApiUrl, requestBody, ct).ConfigureAwait(false);
+        return ExtractTextFromChatCompletion(response);
+    }
+
+    private static string ExtractTextFromChatCompletion(string apiResponse)
+    {
+        using var doc = JsonDocument.Parse(apiResponse);
+        var choices = doc.RootElement.GetProperty("choices");
+        if (choices.GetArrayLength() == 0) return string.Empty;
+        return choices[0].GetProperty("message").GetProperty("content").GetString() ?? string.Empty;
     }
 }

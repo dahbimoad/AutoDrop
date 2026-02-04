@@ -45,6 +45,14 @@ public interface IAiProvider : IDisposable
     Task<AiAnalysisResult> AnalyzeDocumentAsync(string documentPath, IReadOnlyList<CustomFolder>? customFolders = null, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Sends a text prompt and returns the AI response.
+    /// </summary>
+    /// <param name="prompt">The text prompt to send.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The AI response text.</returns>
+    Task<string> SendTextPromptAsync(string prompt, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Checks if vision/image analysis is available with current model.
     /// </summary>
     bool SupportsVision { get; }

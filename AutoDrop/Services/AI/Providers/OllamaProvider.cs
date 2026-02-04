@@ -170,4 +170,28 @@ public sealed class OllamaProvider : AiProviderBase
             return AiAnalysisResult.Failed("Failed to parse AI response.");
         }
     }
+
+    public override async Task<string> SendTextPromptAsync(string prompt, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
+
+        var model = Config?.TextModel.Length > 0 ? Config.TextModel : "llama3.2:latest";
+        var requestBody = new
+        {
+            model,
+            messages = new[] { new { role = "user", content = prompt } },
+            stream = false,
+            options = new { temperature = 0.3 }
+        };
+
+        var response = await SendOllamaRequestAsync(requestBody, ct).ConfigureAwait(false);
+        return ExtractTextFromOllamaResponse(response);
+    }
+
+    private static string ExtractTextFromOllamaResponse(string apiResponse)
+    {
+        using var doc = JsonDocument.Parse(apiResponse);
+        var message = doc.RootElement.GetProperty("message");
+        return message.GetProperty("content").GetString() ?? string.Empty;
+    }
 }
