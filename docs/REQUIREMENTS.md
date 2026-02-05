@@ -607,7 +607,7 @@ As a user, I want the app to analyze file content (not just extensions) to sugge
 |----------|--------|--------|-----|-------|
 | **OpenAI** | GPT-4o, GPT-4o-mini, GPT-4-turbo | ✅ | ❌ | Best overall quality |
 | **Claude** | Claude 3.5 Sonnet/Haiku, Claude 3 Opus | ✅ | ✅ | Best for documents |
-| **Gemini** | Gemini 1.5 Pro/Flash, Gemini 2.0 Flash | ✅ | ✅ | Huge context (2M tokens) |
+| **Gemini** | Gemini 2.5 Flash, 3.0 Flash (Preview) | ✅ | ✅ | Latest frontier AI (1M context) |
 | **Groq** | Llama 3.3 70B, 3.2 90B Vision, Mixtral | ✅ | ❌ | Ultra-fast inference |
 | **Local AI** | ONNX classification models | ✅ | ❌ | 100% offline/private (default) |
 

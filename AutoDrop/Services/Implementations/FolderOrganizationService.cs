@@ -748,12 +748,13 @@ public sealed class FolderOrganizationService : IFolderOrganizationService
                     DestinationFolder = Path.Combine(basePath, category),
                     Size = file.Length,
                     Category = category,
-                    SkipReason = $"AI analysis failed: {ex.Message}"
+                    AiNote = $"AI analysis failed: {ex.Message}"
                 });
             }
         }
 
-        // Add skipped AI files (due to rate limit) with notice
+        // Add skipped AI files (due to rate limit) with informational note
+        // These files still get organized by extension category
         foreach (var file in skippedAiFiles)
         {
             var category = FileCategories.GetCategory(file.Extension);
@@ -763,15 +764,16 @@ public sealed class FolderOrganizationService : IFolderOrganizationService
                 DestinationFolder = Path.Combine(basePath, category),
                 Size = file.Length,
                 Category = category,
-                SkipReason = $"Skipped AI analysis (rate limit: max {settings.MaxAiFilesPerOperation} files)"
+                AiNote = $"AI analysis skipped (rate limit: max {settings.MaxAiFilesPerOperation} files)"
             });
         }
 
         // Add non-AI-analyzable files using category fallback
+        // These files still get organized by extension category
         foreach (var file in nonAiFiles)
         {
             var category = FileCategories.GetCategory(file.Extension);
-            var skipReason = file.Length > settings.MaxAiFileSizeMb * 1024 * 1024
+            var aiNote = file.Length > settings.MaxAiFileSizeMb * 1024 * 1024
                 ? $"File too large for AI ({file.Length / (1024 * 1024):F1} MB > {settings.MaxAiFileSizeMb} MB)"
                 : "File type not supported for AI analysis";
 
@@ -781,7 +783,7 @@ public sealed class FolderOrganizationService : IFolderOrganizationService
                 DestinationFolder = Path.Combine(basePath, category),
                 Size = file.Length,
                 Category = category,
-                SkipReason = skipReason
+                AiNote = aiNote
             });
         }
 

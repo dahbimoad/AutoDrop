@@ -19,7 +19,7 @@ public enum AiProvider
     Claude,
 
     /// <summary>
-    /// Google Gemini models (Gemini 1.5 Pro, Gemini 1.5 Flash).
+    /// Google Gemini models (Gemini 2.5 Flash, Gemini 3 Flash Preview).
     /// </summary>
     Gemini,
 

@@ -8,7 +8,7 @@ namespace AutoDrop.Services.AI.Providers;
 
 /// <summary>
 /// Google Gemini provider implementation.
-/// Supports Gemini 1.5 Pro and Flash with vision and PDF capabilities.
+/// Supports Gemini 2.5/3.0 Flash with multimodal capabilities: vision, PDF, video, audio.
 /// </summary>
 public sealed class GeminiProvider : AiProviderBase
 {
@@ -18,14 +18,14 @@ public sealed class GeminiProvider : AiProviderBase
     {
         Provider = AiProvider.Gemini,
         DisplayName = "Google Gemini",
-        Description = "Gemini 1.5 Pro with vision and native PDF support",
+        Description = "Gemini 2.5/3.0 Flash with multimodal AI: vision, documents, images, audio",
         ApiKeyUrl = "https://aistudio.google.com/apikey",
         IconGlyph = "\uE9CE", // Sparkle icon
         Models =
         [
-            new() { Id = "gemini-1.5-pro", DisplayName = "Gemini 1.5 Pro", SupportsVision = true, SupportsPdf = true, MaxTokens = 2000000, Description = "Most capable, huge context" },
-            new() { Id = "gemini-1.5-flash", DisplayName = "Gemini 1.5 Flash", SupportsVision = true, SupportsPdf = true, MaxTokens = 1000000, Description = "Fast and efficient" },
-            new() { Id = "gemini-2.0-flash-exp", DisplayName = "Gemini 2.0 Flash", SupportsVision = true, SupportsPdf = true, MaxTokens = 1000000, Description = "Latest experimental" }
+            new() { Id = "gemini-2.5-flash", DisplayName = "Gemini 2.5 Flash", SupportsVision = true, SupportsPdf = true, MaxTokens = 1048576, Description = "Best price-performance, 1M context" },
+            new() { Id = "gemini-3-flash-preview", DisplayName = "Gemini 3 Flash (Preview)", SupportsVision = true, SupportsPdf = true, MaxTokens = 1048576, Description = "Latest AI, frontier intelligence" },
+            new() { Id = "gemini-2.0-flash", DisplayName = "Gemini 2.0 Flash", SupportsVision = true, SupportsPdf = true, MaxTokens = 1048576, Description = "Fast and efficient (legacy)" }
         ]
     };
 
@@ -50,7 +50,7 @@ public sealed class GeminiProvider : AiProviderBase
         
         try
         {
-            var model = Config.TextModel.Length > 0 ? Config.TextModel : "gemini-1.5-flash";
+            var model = Config.TextModel.Length > 0 ? Config.TextModel : "gemini-2.5-flash";
             var requestBody = new
             {
                 contents = new[] { new { parts = new[] { new { text = "Hi" } } } },
@@ -80,7 +80,7 @@ public sealed class GeminiProvider : AiProviderBase
             var imageBytes = await File.ReadAllBytesAsync(imagePath, ct);
             var base64 = Convert.ToBase64String(imageBytes);
             var mimeType = GetImageMimeType(Path.GetExtension(imagePath));
-            var model = Config.VisionModel.Length > 0 ? Config.VisionModel : "gemini-1.5-pro";
+            var model = Config.VisionModel.Length > 0 ? Config.VisionModel : "gemini-2.5-flash";
 
             var requestBody = new
             {
@@ -117,7 +117,7 @@ public sealed class GeminiProvider : AiProviderBase
         try
         {
             var ext = Path.GetExtension(documentPath).ToLowerInvariant();
-            var model = Config.TextModel.Length > 0 ? Config.TextModel : "gemini-1.5-pro";
+            var model = Config.TextModel.Length > 0 ? Config.TextModel : "gemini-2.5-flash";
             object requestBody;
 
             if (ext == ".pdf")
@@ -200,7 +200,7 @@ public sealed class GeminiProvider : AiProviderBase
         if (string.IsNullOrWhiteSpace(Config?.ApiKey))
             throw new InvalidOperationException("API key not configured.");
 
-        var model = Config.TextModel.Length > 0 ? Config.TextModel : "gemini-1.5-flash";
+        var model = Config.TextModel.Length > 0 ? Config.TextModel : "gemini-2.5-flash";
         var requestBody = new
         {
             contents = new[] { new { parts = new[] { new { text = prompt } } } },
