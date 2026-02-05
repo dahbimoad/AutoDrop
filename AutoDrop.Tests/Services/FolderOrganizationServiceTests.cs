@@ -543,7 +543,7 @@ public sealed class FolderOrganizationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task PreviewOrganizationAsync_ByContent_LargeFilesUsesFallbackButNotSkipped()
+    public async Task PreviewOrganizationAsync_ByContent_SkipsLargeFiles()
     {
         // Arrange
         var folder = _fixture.CreateDirectory("large_file_test");
@@ -564,9 +564,7 @@ public sealed class FolderOrganizationServiceTests : IDisposable
 
         // Assert
         var file = groups.First().Files.First();
-        file.AiNote.Should().Contain("too large");
-        file.IsSkipped.Should().BeFalse("large files should use fallback category, not be skipped");
-        file.SkipReason.Should().BeNull();
+        file.SkipReason.Should().Contain("too large");
     }
 
     [Fact]
@@ -1185,7 +1183,7 @@ public sealed class FolderOrganizationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task PreviewOrganizationAsync_ByContent_WhenAiThrows_UsesFallbackNotSkipped()
+    public async Task PreviewOrganizationAsync_ByContent_WhenAiThrows_RecordsSkipReason()
     {
         // Arrange
         var folder = _fixture.CreateDirectoryWithFiles("ai_content_error_test", "photo.jpg");
@@ -1209,9 +1207,7 @@ public sealed class FolderOrganizationServiceTests : IDisposable
 
         // Assert
         var file = groups.First().Files.First();
-        file.AiNote.Should().Contain("AI analysis failed");
-        file.IsSkipped.Should().BeFalse("AI failures should use fallback category, not be skipped");
-        file.SkipReason.Should().BeNull();
+        file.SkipReason.Should().Contain("AI analysis failed");
     }
 
     #endregion
