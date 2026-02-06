@@ -109,14 +109,6 @@ jobs:
           Compress-Archive -Path ./publish/win-arm64/* -DestinationPath ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-arm64-portable.zip
         shell: pwsh
 
-      # Create wizard images for installer
-      - name: Create installer images
-        run: |
-          Push-Location installer
-          powershell -ExecutionPolicy Bypass -File create-images.ps1
-          Pop-Location
-        shell: pwsh
-
       # Build Installer (x64) with Inno Setup
       - name: Build Installer (x64)
         run: |
