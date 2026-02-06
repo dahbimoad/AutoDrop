@@ -220,6 +220,14 @@ public partial class DropZoneWindow : Window
         aiSettingsWindow.ShowDialog();
     }
 
+    private void OnHistoryClick(object sender, RoutedEventArgs e)
+    {
+        // Open History window
+        var historyWindow = App.GetService<HistoryWindow>();
+        historyWindow.Owner = this;
+        historyWindow.ShowDialog();
+    }
+
     private void OnCloseClick(object sender, RoutedEventArgs e)
     {
         Application.Current.Shutdown();

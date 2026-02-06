@@ -13,6 +13,7 @@ public sealed class BatchOperationService : IBatchOperationService
     private readonly IDestinationSuggestionService _suggestionService;
     private readonly IDuplicateDetectionService _duplicateDetectionService;
     private readonly IRuleService _ruleService;
+    private readonly IHistoryService _historyService;
     private readonly ILogger<BatchOperationService> _logger;
 
     /// <inheritdoc />
@@ -23,12 +24,14 @@ public sealed class BatchOperationService : IBatchOperationService
         IDestinationSuggestionService suggestionService,
         IDuplicateDetectionService duplicateDetectionService,
         IRuleService ruleService,
+        IHistoryService historyService,
         ILogger<BatchOperationService> logger)
     {
         _fileOperationService = fileOperationService ?? throw new ArgumentNullException(nameof(fileOperationService));
         _suggestionService = suggestionService ?? throw new ArgumentNullException(nameof(suggestionService));
         _duplicateDetectionService = duplicateDetectionService ?? throw new ArgumentNullException(nameof(duplicateDetectionService));
         _ruleService = ruleService ?? throw new ArgumentNullException(nameof(ruleService));
+        _historyService = historyService ?? throw new ArgumentNullException(nameof(historyService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         _logger.LogDebug("BatchOperationService initialized");
@@ -185,6 +188,13 @@ public sealed class BatchOperationService : IBatchOperationService
                     // Perform the move
                     var operation = await _fileOperationService
                         .MoveAsync(item.FullPath, group.DestinationPath, cancellationToken: cancellationToken)
+                        .ConfigureAwait(false);
+
+                    // Record operation in history
+                    await _historyService.RecordOperationAsync(
+                        operation.SourcePath, 
+                        operation.DestinationPath, 
+                        OperationType.Move)
                         .ConfigureAwait(false);
 
                     operations.Add(operation);

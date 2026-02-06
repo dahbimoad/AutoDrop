@@ -56,4 +56,9 @@ public interface IWindowService
     /// </summary>
     /// <param name="folderPath">The path to the folder to organize.</param>
     void ShowFolderOrganization(string folderPath);
+
+    /// <summary>
+    /// Opens the Operation History window.
+    /// </summary>
+    void ShowHistory();
 }

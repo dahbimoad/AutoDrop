@@ -18,6 +18,7 @@ public sealed class BatchOperationServiceTests : IDisposable
     private readonly Mock<IDestinationSuggestionService> _mockSuggestionService;
     private readonly Mock<IDuplicateDetectionService> _mockDuplicateDetectionService;
     private readonly Mock<IRuleService> _mockRuleService;
+    private readonly Mock<IHistoryService> _mockHistoryService;
     private readonly ILogger<BatchOperationService> _logger;
 
     public BatchOperationServiceTests()
@@ -29,12 +30,14 @@ public sealed class BatchOperationServiceTests : IDisposable
         _mockSuggestionService = new Mock<IDestinationSuggestionService>();
         _mockDuplicateDetectionService = new Mock<IDuplicateDetectionService>();
         _mockRuleService = new Mock<IRuleService>();
+        _mockHistoryService = new Mock<IHistoryService>();
 
         _service = new BatchOperationService(
             _mockFileOperationService.Object,
             _mockSuggestionService.Object,
             _mockDuplicateDetectionService.Object,
             _mockRuleService.Object,
+            _mockHistoryService.Object,
             _logger);
     }
 
