@@ -1,6 +1,7 @@
 # AutoDrop Release Pipeline
 # Triggers when a version tag is pushed (e.g., v1.0.0)
 # Creates GitHub Release with modern EXE installer + portable ZIP
+# Platforms: x64 (primary) + ARM64 (growing)
 
 name: Release
 
@@ -59,7 +60,7 @@ jobs:
       - name: Run Tests
         run: dotnet test AutoDrop.sln --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal
 
-      # Build for Windows x64
+      # Build for Windows x64 (primary platform)
       - name: Publish Windows x64
         run: |
           dotnet publish ${{ env.PROJECT_PATH }} `
@@ -73,21 +74,7 @@ jobs:
             -p:Version=${{ steps.version.outputs.BASE_VERSION }}
         shell: pwsh
 
-      # Build for Windows x86 (32-bit)
-      - name: Publish Windows x86
-        run: |
-          dotnet publish ${{ env.PROJECT_PATH }} `
-            --configuration ${{ env.BUILD_CONFIGURATION }} `
-            --runtime win-x86 `
-            --self-contained true `
-            --output ./publish/win-x86 `
-            -p:PublishSingleFile=true `
-            -p:IncludeNativeLibrariesForSelfExtract=true `
-            -p:EnableCompressionInSingleFile=true `
-            -p:Version=${{ steps.version.outputs.BASE_VERSION }}
-        shell: pwsh
-
-      # Build for Windows ARM64
+      # Build for Windows ARM64 (Surface Pro X, ARM laptops)
       - name: Publish Windows ARM64
         run: |
           dotnet publish ${{ env.PROJECT_PATH }} `
@@ -105,7 +92,6 @@ jobs:
       - name: Create release archives
         run: |
           Compress-Archive -Path ./publish/win-x64/* -DestinationPath ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x64-portable.zip
-          Compress-Archive -Path ./publish/win-x86/* -DestinationPath ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x86-portable.zip
           Compress-Archive -Path ./publish/win-arm64/* -DestinationPath ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-arm64-portable.zip
         shell: pwsh
 
@@ -120,33 +106,12 @@ jobs:
                     -Destination ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x64-setup.exe
         shell: pwsh
 
-      # Build Installer (x86) with Inno Setup
-      - name: Build Installer (x86)
-        run: |
-          # Modify ISS for x86
-          $issContent = Get-Content installer/AutoDrop.iss -Raw
-          $issContent = $issContent -replace 'win-x64', 'win-x86'
-          $issContent = $issContent -replace 'ArchitecturesAllowed=x64compatible', '; x86 build'
-          $issContent = $issContent -replace 'ArchitecturesInstallIn64BitMode=x64compatible', '; x86 mode'
-          $issContent = $issContent -replace 'OutputBaseFilename=AutoDrop-\{#MyAppVersion\}-win-x64-setup', 'OutputBaseFilename=AutoDrop-{#MyAppVersion}-win-x86-setup'
-          $issContent | Set-Content installer/AutoDrop-x86.iss
-          
-          $env:APP_VERSION = "${{ steps.version.outputs.VERSION }}"
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
-            /DAppVersion=${{ steps.version.outputs.VERSION }} `
-            installer/AutoDrop-x86.iss
-          Move-Item -Path output/AutoDrop-${{ steps.version.outputs.VERSION }}-win-x86-setup.exe `
-                    -Destination ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x86-setup.exe
-        shell: pwsh
-
       # Generate SHA256 checksums
       - name: Generate checksums
         run: |
           $files = @(
             "AutoDrop-${{ steps.version.outputs.VERSION }}-win-x64-setup.exe",
-            "AutoDrop-${{ steps.version.outputs.VERSION }}-win-x86-setup.exe",
             "AutoDrop-${{ steps.version.outputs.VERSION }}-win-x64-portable.zip",
-            "AutoDrop-${{ steps.version.outputs.VERSION }}-win-x86-portable.zip",
             "AutoDrop-${{ steps.version.outputs.VERSION }}-win-arm64-portable.zip"
           )
           $checksums = @()
@@ -168,18 +133,15 @@ jobs:
           body: |
             ## AutoDrop ${{ steps.version.outputs.VERSION }}
             
-            ### 🎯 Recommended Download
+            ### 🎯 Downloads
             | Platform | Installer (Recommended) | Portable |
             |----------|------------------------|----------|
-            | **Windows x64** | `AutoDrop-${{ steps.version.outputs.VERSION }}-win-x64-setup.exe` | `*-portable.zip` |
-            | **Windows x86** | `AutoDrop-${{ steps.version.outputs.VERSION }}-win-x86-setup.exe` | `*-portable.zip` |
-            | **Windows ARM64** | N/A | `*-portable.zip` |
+            | **Windows x64** | `*-win-x64-setup.exe` | `*-win-x64-portable.zip` |
+            | **Windows ARM64** | — | `*-win-arm64-portable.zip` |
             
             ### 📦 Installer Features
             - ✅ Modern Windows 11 style UI
-            - ✅ Desktop shortcut
-            - ✅ Start menu entry
-            - ✅ Auto-start with Windows (optional)
+            - ✅ Desktop shortcut & Start menu entry
             - ✅ Proper uninstaller (Add/Remove Programs)
             - ✅ Per-user install (no admin required)
             
@@ -190,14 +152,9 @@ jobs:
             
             ### ✅ SHA256 Checksums
             See `checksums.txt` for file verification.
-            
-            ### What's New
-            See commits since last release for changes.
           files: |
             ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x64-setup.exe
-            ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x86-setup.exe
             ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x64-portable.zip
-            ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x86-portable.zip
             ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-arm64-portable.zip
             ./checksums.txt
           draft: false
