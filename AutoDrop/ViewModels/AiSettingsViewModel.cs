@@ -423,8 +423,9 @@ public sealed partial class AiSettingsViewModel : ObservableObject
 
         try
         {
-            // Configure and validate
+            // Configure and validate - include the API key so the provider can use it
             var config = CreateCurrentConfig();
+            config.ApiKey = ApiKey;
             await _aiService.ConfigureProviderAsync(config);
             var isValid = await _aiService.ValidateProviderAsync(SelectedProvider.Provider);
 
