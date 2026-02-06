@@ -88,6 +88,16 @@ public partial class TrayIconViewModel : Base.ViewModelBase
     }
 
     /// <summary>
+    /// Opens the Operation History window.
+    /// </summary>
+    [RelayCommand]
+    private void OpenHistory()
+    {
+        _logger.LogDebug("Opening History");
+        _windowService.ShowHistory();
+    }
+
+    /// <summary>
     /// Exits the application.
     /// </summary>
     [RelayCommand]

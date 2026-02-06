@@ -106,7 +106,7 @@ AutoDrop includes powerful AI capabilities for content-based file organization:
 |----------|--------|--------|-----|--------------|-------|
 | **OpenAI** | GPT-4o, GPT-4o-mini | ✅ | ❌ | ✅ | Best quality |
 | **Claude** | Claude 3.5 Sonnet, Haiku, Opus | ✅ | ✅ | ✅ | Best for documents |
-| **Gemini** | Gemini 1.5 Pro/Flash, 2.0 Flash | ✅ | ✅ | ✅ | Huge context window |
+| **Gemini** | Gemini 2.5 Flash, 3.0 Flash (Preview) | ✅ | ✅ | ✅ | Latest frontier AI |
 | **Groq** | Llama 3.3 70B, 3.2 90B Vision | ✅ | ❌ | ✅ | Ultra-fast inference |
 | **Local AI** | ONNX embedding models | ✅ | ❌ | ❌ | 100% offline/private (default) |
 

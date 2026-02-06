@@ -154,4 +154,20 @@ public sealed class WindowService : IWindowService
             throw;
         }
     }
+
+    /// <inheritdoc />
+    public void ShowHistory()
+    {
+        _logger.LogDebug("Opening History window");
+        try
+        {
+            var historyWindow = _serviceProvider.GetRequiredService<HistoryWindow>();
+            historyWindow.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to open History window");
+            throw;
+        }
+    }
 }

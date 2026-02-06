@@ -8,9 +8,9 @@
                  mc:Ignorable="d"
                  Title="Manage Rules &amp; Folders"
                  Width="700"
-                 Height="550"
+                 Height="600"
                  MinWidth="600"
-                 MinHeight="450"
+                 MinHeight="500"
                  WindowStartupLocation="CenterScreen"
                  ExtendsContentIntoTitleBar="True"
                  d:DataContext="{d:DesignInstance viewmodels:RulesManagerViewModel, IsDesignTimeCreatable=False}">

@@ -81,7 +81,7 @@ public sealed class AiServiceTests : IDisposable
                         Provider = AiProvider.Groq,
                         ApiKey = "test-api-key",
                         TextModel = "llama-3.3-70b-versatile",
-                        VisionModel = "llama-3.2-90b-vision-preview",
+                        VisionModel = "meta-llama/llama-4-scout-17b-16e-instruct",
                         IsValidated = true
                     }
                 ]

@@ -1,12 +1,13 @@
 using System.Windows;
 using AutoDrop.ViewModels;
+using Wpf.Ui.Controls;
 
 namespace AutoDrop.Views.Windows;
 
 /// <summary>
 /// Interaction logic for BatchOperationWindow.xaml
 /// </summary>
-public partial class BatchOperationWindow : Window
+public partial class BatchOperationWindow : FluentWindow
 {
     private readonly BatchOperationViewModel _viewModel;
 

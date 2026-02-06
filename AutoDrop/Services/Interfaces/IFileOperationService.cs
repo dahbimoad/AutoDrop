@@ -12,9 +12,10 @@ public interface IFileOperationService
     /// </summary>
     /// <param name="sourcePath">Source file or folder path.</param>
     /// <param name="destinationFolder">Destination folder path.</param>
+    /// <param name="suggestedFileName">Optional AI-suggested filename (without extension). When provided, the file is renamed during move.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The completed move operation details.</returns>
-    Task<MoveOperation> MoveAsync(string sourcePath, string destinationFolder, CancellationToken cancellationToken = default);
+    Task<MoveOperation> MoveAsync(string sourcePath, string destinationFolder, string? suggestedFileName = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Undoes a previous move operation.

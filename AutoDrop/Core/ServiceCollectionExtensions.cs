@@ -76,6 +76,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDuplicateDetectionService, DuplicateDetectionService>();
         services.AddSingleton<IBatchOperationService, BatchOperationService>();
         services.AddSingleton<IFolderOrganizationService, FolderOrganizationService>();
+        services.AddSingleton<IHistoryService, HistoryService>();
 
         // AI Services (Multi-Provider)
         // Local AI (default - ONNX-based, 100% offline)
@@ -102,6 +103,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<BatchOperationViewModel>();
         services.AddTransient<AiSettingsViewModel>();
         services.AddTransient<FolderOrganizationViewModel>();
+        services.AddTransient<HistoryViewModel>();
 
         // Windows
         services.AddSingleton<DropZoneWindow>();
@@ -109,6 +111,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<BatchOperationWindow>();
         services.AddTransient<AiSettingsWindow>();
         services.AddTransient<FolderOrganizationWindow>();
+        services.AddTransient<HistoryWindow>();
 
         return services;
     }

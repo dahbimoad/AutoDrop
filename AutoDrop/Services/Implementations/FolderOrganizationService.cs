@@ -242,7 +242,7 @@ public sealed class FolderOrganizationService : IFolderOrganizationService
 
                 // Move the file
                 var result = await _fileOperationService
-                    .MoveAsync(file.SourcePath, file.DestinationFolder, cancellationToken)
+                    .MoveAsync(file.SourcePath, file.DestinationFolder, cancellationToken: cancellationToken)
                     .ConfigureAwait(false);
 
                 operations.Add(result);

@@ -6,25 +6,26 @@ namespace AutoDrop.Services.AI.Providers;
 
 /// <summary>
 /// Groq provider implementation (fast inference).
-/// Supports Llama 3.3 70B and Llama 3.2 Vision models.
+/// Supports Llama 4 Scout/Maverick (vision) and Llama 3.3 70B (text).
 /// </summary>
 public sealed class GroqProvider : AiProviderBase
 {
     private const string ApiUrl = "https://api.groq.com/openai/v1/chat/completions";
-    
+    private const int MaxBase64ImageSizeBytes = 4 * 1024 * 1024; // Groq 4MB limit for base64 images
+
     private static readonly AiProviderInfo _providerInfo = new()
     {
         Provider = AiProvider.Groq,
         DisplayName = "Groq",
-        Description = "Ultra-fast Llama models with vision support",
+        Description = "Ultra-fast Llama 4 & 3.3 models with vision support",
         ApiKeyUrl = "https://console.groq.com/keys",
         IconGlyph = "\uE945", // Lightning bolt icon
         Models =
         [
             new() { Id = "llama-3.3-70b-versatile", DisplayName = "Llama 3.3 70B", SupportsVision = false, SupportsPdf = false, MaxTokens = 128000, Description = "Best quality text analysis" },
-            new() { Id = "llama-3.2-90b-vision-preview", DisplayName = "Llama 3.2 90B Vision", SupportsVision = true, SupportsPdf = false, MaxTokens = 128000, Description = "Vision-capable" },
-            new() { Id = "llama-3.1-70b-versatile", DisplayName = "Llama 3.1 70B", SupportsVision = false, SupportsPdf = false, MaxTokens = 128000, Description = "Fast and reliable" },
-            new() { Id = "mixtral-8x7b-32768", DisplayName = "Mixtral 8x7B", SupportsVision = false, SupportsPdf = false, MaxTokens = 32768, Description = "Efficient MoE model" }
+            new() { Id = "meta-llama/llama-4-scout-17b-16e-instruct", DisplayName = "Llama 4 Scout", SupportsVision = true, SupportsPdf = false, MaxTokens = 131072, Description = "Fast multimodal, vision-capable" },
+            new() { Id = "meta-llama/llama-4-maverick-17b-128e-instruct", DisplayName = "Llama 4 Maverick", SupportsVision = true, SupportsPdf = false, MaxTokens = 131072, Description = "Powerful multimodal, vision-capable" },
+            new() { Id = "llama-3.1-8b-instant", DisplayName = "Llama 3.1 8B", SupportsVision = false, SupportsPdf = false, MaxTokens = 128000, Description = "Fast and lightweight" }
         ]
     };
 
@@ -72,8 +73,15 @@ public sealed class GroqProvider : AiProviderBase
         {
             var imageBytes = await File.ReadAllBytesAsync(imagePath, ct);
             var base64 = Convert.ToBase64String(imageBytes);
+
+            // Groq enforces a 4MB limit for base64-encoded images
+            if (base64.Length > MaxBase64ImageSizeBytes)
+            {
+                return AiAnalysisResult.Failed($"Image too large for Groq ({base64.Length / (1024 * 1024)}MB). Max is 4MB base64-encoded.");
+            }
+
             var mimeType = GetImageMimeType(Path.GetExtension(imagePath));
-            var model = Config.VisionModel.Length > 0 ? Config.VisionModel : "llama-3.2-90b-vision-preview";
+            var model = Config.VisionModel.Length > 0 ? Config.VisionModel : "meta-llama/llama-4-scout-17b-16e-instruct";
 
             var requestBody = new
             {

@@ -7,11 +7,11 @@
                  xmlns:viewmodels="clr-namespace:AutoDrop.ViewModels"
                  mc:Ignorable="d"
                  Title="AI Integration"
-                 Width="650"
-                 Height="750"
-                 MinWidth="600"
-                 MinHeight="650"
-                 WindowStartupLocation="CenterOwner"
+                 Width="750"
+                 Height="800"
+                 MinWidth="650"
+                 MinHeight="600"
+                 WindowStartupLocation="CenterScreen"
                  ExtendsContentIntoTitleBar="True"
                  d:DataContext="{d:DesignInstance viewmodels:AiSettingsViewModel, IsDesignTimeCreatable=False}">
 

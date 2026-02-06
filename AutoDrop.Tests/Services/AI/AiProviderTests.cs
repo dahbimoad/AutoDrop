@@ -594,7 +594,7 @@ public sealed class AiProviderTests : IDisposable
         {
             Provider = AiProvider.Groq,
             ApiKey = "test-key",
-            VisionModel = "llama-3.2-90b-vision-preview"
+            VisionModel = "meta-llama/llama-4-scout-17b-16e-instruct"
         };
 
         // Act

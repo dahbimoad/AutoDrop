@@ -700,7 +700,7 @@ public sealed class FolderOrganizationServiceTests : IDisposable
         };
 
         _fileOperationServiceMock
-            .Setup(x => x.MoveAsync(sourceFile, destFolder, It.IsAny<CancellationToken>()))
+            .Setup(x => x.MoveAsync(sourceFile, destFolder, It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MoveOperation
             {
                 SourcePath = sourceFile,
@@ -744,7 +744,7 @@ public sealed class FolderOrganizationServiceTests : IDisposable
         };
 
         _fileOperationServiceMock
-            .Setup(x => x.MoveAsync(sourceFile, destFolder, It.IsAny<CancellationToken>()))
+            .Setup(x => x.MoveAsync(sourceFile, destFolder, It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MoveOperation
             {
                 SourcePath = sourceFile,
@@ -789,7 +789,7 @@ public sealed class FolderOrganizationServiceTests : IDisposable
         };
 
         _fileOperationServiceMock
-            .Setup(x => x.MoveAsync(sourceFile, destFolder, It.IsAny<CancellationToken>()))
+            .Setup(x => x.MoveAsync(sourceFile, destFolder, It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new IOException("File in use"));
 
         // Act
@@ -1127,7 +1127,7 @@ public sealed class FolderOrganizationServiceTests : IDisposable
         };
 
         _fileOperationServiceMock
-            .Setup(x => x.MoveAsync(sourceFile, destFolder, It.IsAny<CancellationToken>()))
+            .Setup(x => x.MoveAsync(sourceFile, destFolder, It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MoveOperation
             {
                 SourcePath = sourceFile,

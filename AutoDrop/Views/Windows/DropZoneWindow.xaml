@@ -64,6 +64,12 @@
                                    Click="OnAiSettingsClick"
                                    Padding="4"
                                    FontSize="10"/>
+                        <ui:Button Icon="{ui:SymbolIcon History24}"
+                                   Appearance="Transparent"
+                                   ToolTip="Operation History"
+                                   Click="OnHistoryClick"
+                                   Padding="4"
+                                   FontSize="10"/>
                     </StackPanel>
                     
                     <!-- Close/Minimize Buttons -->

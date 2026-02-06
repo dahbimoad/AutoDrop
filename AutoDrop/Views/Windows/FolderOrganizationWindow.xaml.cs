@@ -1,12 +1,13 @@
 using System.Windows;
 using AutoDrop.ViewModels;
+using Wpf.Ui.Controls;
 
 namespace AutoDrop.Views.Windows;
 
 /// <summary>
 /// Interaction logic for FolderOrganizationWindow.xaml
 /// </summary>
-public partial class FolderOrganizationWindow : Window
+public partial class FolderOrganizationWindow : FluentWindow
 {
     private readonly FolderOrganizationViewModel _viewModel;
 

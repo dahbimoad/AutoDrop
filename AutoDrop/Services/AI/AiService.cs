@@ -123,7 +123,34 @@ public sealed class AiService : IAiService, IDisposable
         
         if (config != null)
         {
-            _activeProvider.Configure(config);
+            // Load secure key if needed, same as InitializeActiveProviderAsync
+            if (config.IsKeySecured)
+            {
+                var secureKey = await _credentialService.GetCredentialAsync(config.CredentialKey);
+                if (!string.IsNullOrEmpty(secureKey))
+                {
+                    var configWithKey = new AiProviderConfig
+                    {
+                        Provider = config.Provider,
+                        ApiKey = secureKey,
+                        BaseUrl = config.BaseUrl,
+                        TextModel = config.TextModel,
+                        VisionModel = config.VisionModel,
+                        IsValidated = config.IsValidated,
+                        LastValidated = config.LastValidated,
+                        IsKeySecured = config.IsKeySecured
+                    };
+                    _activeProvider.Configure(configWithKey);
+                }
+                else
+                {
+                    _activeProvider.Configure(config);
+                }
+            }
+            else
+            {
+                _activeProvider.Configure(config);
+            }
         }
 
         // Save active provider to settings
@@ -148,16 +175,49 @@ public sealed class AiService : IAiService, IDisposable
 
         provider.Configure(config);
 
-        // Save configuration
+        // If config has secure storage flag but no key in memory, load from secure storage
+        if (config.IsKeySecured && string.IsNullOrWhiteSpace(config.ApiKey))
+        {
+            var secureKey = await _credentialService.GetCredentialAsync(config.CredentialKey);
+            if (!string.IsNullOrEmpty(secureKey))
+            {
+                var configWithKey = new AiProviderConfig
+                {
+                    Provider = config.Provider,
+                    ApiKey = secureKey,
+                    BaseUrl = config.BaseUrl,
+                    TextModel = config.TextModel,
+                    VisionModel = config.VisionModel,
+                    IsValidated = config.IsValidated,
+                    LastValidated = config.LastValidated,
+                    IsKeySecured = config.IsKeySecured
+                };
+                provider.Configure(configWithKey);
+            }
+        }
+
+        // Save configuration - never persist plaintext API keys
+        var configToSave = new AiProviderConfig
+        {
+            Provider = config.Provider,
+            ApiKey = config.IsKeySecured ? string.Empty : config.ApiKey,
+            IsKeySecured = config.IsKeySecured,
+            BaseUrl = config.BaseUrl,
+            TextModel = config.TextModel,
+            VisionModel = config.VisionModel,
+            IsValidated = config.IsValidated,
+            LastValidated = config.LastValidated
+        };
+
         var settings = await GetAiSettingsAsync() ?? new AiSettings();
         var existingConfig = settings.ProviderConfigs.FirstOrDefault(c => c.Provider == config.Provider);
-        
+
         if (existingConfig != null)
         {
             settings.ProviderConfigs.Remove(existingConfig);
         }
-        
-        settings.ProviderConfigs.Add(config);
+
+        settings.ProviderConfigs.Add(configToSave);
         await SaveAiSettingsAsync(settings);
 
         _logger.LogInformation("Provider {Provider} configured", config.Provider);

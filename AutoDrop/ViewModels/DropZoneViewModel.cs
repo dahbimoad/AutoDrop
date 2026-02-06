@@ -21,6 +21,7 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
     private readonly IAiService _aiService;
     private readonly ISettingsService _settingsService;
     private readonly IWindowService _windowService;
+    private readonly IHistoryService _historyService;
     private readonly ILogger<DropZoneViewModel> _logger;
     private bool _disposed;
     private DuplicateHandling _currentDuplicateHandling = DuplicateHandling.Ask;
@@ -117,6 +118,7 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
         IAiService aiService,
         ISettingsService settingsService,
         IWindowService windowService,
+        IHistoryService historyService,
         ILogger<DropZoneViewModel> logger)
     {
         _fileOperationService = fileOperationService ?? throw new ArgumentNullException(nameof(fileOperationService));
@@ -128,6 +130,7 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
         _aiService = aiService ?? throw new ArgumentNullException(nameof(aiService));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _windowService = windowService ?? throw new ArgumentNullException(nameof(windowService));
+        _historyService = historyService ?? throw new ArgumentNullException(nameof(historyService));
         _logger = logger;
 
         // Subscribe to undo events
@@ -361,6 +364,12 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
             {
                 var operation = await _fileOperationService.MoveAsync(item.FullPath, rule.Destination);
 
+                // Record operation in history
+                await _historyService.RecordOperationAsync(
+                    operation.SourcePath, 
+                    operation.DestinationPath, 
+                    OperationType.Move);
+
                 // Register undo operation
                 RegisterUndoForOperation(operation);
 
@@ -483,7 +492,25 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
                     }
                 }
 
-                var operation = await _fileOperationService.MoveAsync(item.FullPath, suggestion.FullPath);
+                // Pass AI-suggested filename if smart rename is enabled and we have a suggestion
+                string? suggestedFileName = null;
+                if (AiAnalysisResult is { Success: true, SuggestedName: not null })
+                {
+                    var settings = await _settingsService.GetSettingsAsync();
+                    if (settings.AiSettings.EnableSmartRename)
+                    {
+                        suggestedFileName = AiAnalysisResult.SuggestedName;
+                    }
+                }
+
+                var operation = await _fileOperationService.MoveAsync(item.FullPath, suggestion.FullPath, suggestedFileName);
+
+                // Record operation in history with AI confidence
+                await _historyService.RecordOperationAsync(
+                    operation.SourcePath, 
+                    operation.DestinationPath, 
+                    OperationType.Move,
+                    AiAnalysisResult?.Confidence);
 
                 // Register undo operation
                 RegisterUndoForOperation(operation);

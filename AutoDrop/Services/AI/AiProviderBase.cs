@@ -64,8 +64,16 @@ public abstract class AiProviderBase : IAiProvider
         var json = JsonSerializer.Serialize(requestBody);
         using var content = new StringContent(json, Encoding.UTF8, "application/json");
         var response = await HttpClient.PostAsync(url, content, ct).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            Logger.LogError("API request failed ({StatusCode}): {ErrorBody}", (int)response.StatusCode, responseBody);
+            throw new HttpRequestException(
+                $"API error ({(int)response.StatusCode}): {responseBody}");
+        }
+
+        return responseBody;
     }
 
     protected AiAnalysisResult ParseChatCompletionResponse(string apiResponse, AiContentType contentType, IReadOnlyList<CustomFolder>? customFolders = null)
