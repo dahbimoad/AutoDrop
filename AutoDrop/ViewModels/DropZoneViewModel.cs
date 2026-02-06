@@ -483,7 +483,18 @@ public partial class DropZoneViewModel : Base.ViewModelBase, IDisposable
                     }
                 }
 
-                var operation = await _fileOperationService.MoveAsync(item.FullPath, suggestion.FullPath);
+                // Pass AI-suggested filename if smart rename is enabled and we have a suggestion
+                string? suggestedFileName = null;
+                if (AiAnalysisResult is { Success: true, SuggestedName: not null })
+                {
+                    var settings = await _settingsService.GetSettingsAsync();
+                    if (settings.AiSettings.EnableSmartRename)
+                    {
+                        suggestedFileName = AiAnalysisResult.SuggestedName;
+                    }
+                }
+
+                var operation = await _fileOperationService.MoveAsync(item.FullPath, suggestion.FullPath, suggestedFileName);
 
                 // Register undo operation
                 RegisterUndoForOperation(operation);

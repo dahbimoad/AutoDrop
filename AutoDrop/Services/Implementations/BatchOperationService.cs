@@ -184,7 +184,7 @@ public sealed class BatchOperationService : IBatchOperationService
 
                     // Perform the move
                     var operation = await _fileOperationService
-                        .MoveAsync(item.FullPath, group.DestinationPath, cancellationToken)
+                        .MoveAsync(item.FullPath, group.DestinationPath, cancellationToken: cancellationToken)
                         .ConfigureAwait(false);
 
                     operations.Add(operation);

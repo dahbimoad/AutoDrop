@@ -18,7 +18,7 @@ public sealed class FileOperationService : IFileOperationService
     }
 
     /// <inheritdoc />
-    public async Task<MoveOperation> MoveAsync(string sourcePath, string destinationFolder, CancellationToken cancellationToken = default)
+    public async Task<MoveOperation> MoveAsync(string sourcePath, string destinationFolder, string? suggestedFileName = null, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationFolder);
@@ -40,6 +40,15 @@ public sealed class FileOperationService : IFileOperationService
 
         var isDirectory = Directory.Exists(sourcePath);
         var itemName = Path.GetFileName(sourcePath);
+
+        // Apply AI-suggested filename if provided (files only, keep original extension)
+        if (!isDirectory && !string.IsNullOrWhiteSpace(suggestedFileName))
+        {
+            var originalExtension = Path.GetExtension(sourcePath);
+            itemName = suggestedFileName + originalExtension;
+            _logger.LogInformation("Smart rename: {Original} -> {NewName}", Path.GetFileName(sourcePath), itemName);
+        }
+
         var destinationPath = GetUniqueFilePath(destinationFolder, itemName);
 
         _logger.LogDebug("Move details: IsDirectory={IsDirectory}, ItemName={ItemName}, FinalPath={FinalPath}", 

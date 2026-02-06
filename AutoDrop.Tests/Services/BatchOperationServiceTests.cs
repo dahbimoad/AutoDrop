@@ -167,7 +167,7 @@ public sealed class BatchOperationServiceTests : IDisposable
         SetupNoDuplicatesDetection();
 
         _mockFileOperationService
-            .Setup(s => s.MoveAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.MoveAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new IOException("Access denied"));
 
         // Act
@@ -199,8 +199,8 @@ public sealed class BatchOperationServiceTests : IDisposable
         // First file fails, second succeeds - use sequence for different behaviors
         var callCount = 0;
         _mockFileOperationService
-            .Setup(s => s.MoveAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string source, string dest, CancellationToken _) =>
+            .Setup(s => s.MoveAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string source, string dest, string? _, CancellationToken __) =>
             {
                 callCount++;
                 if (callCount == 1)
@@ -300,8 +300,8 @@ public sealed class BatchOperationServiceTests : IDisposable
     private void SetupSuccessfulMoveOperations()
     {
         _mockFileOperationService
-            .Setup(s => s.MoveAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string source, string dest, CancellationToken _) => new MoveOperation
+            .Setup(s => s.MoveAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string source, string dest, string? _, CancellationToken __) => new MoveOperation
             {
                 ItemName = Path.GetFileName(source),
                 SourcePath = source,

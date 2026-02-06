@@ -191,7 +191,7 @@ public sealed class FileOperationServiceTests : IDisposable
         cts.Cancel();
 
         // Act & Assert
-        var act = async () => await _service.MoveAsync(sourceFile, destinationDir, cts.Token);
+        var act = async () => await _service.MoveAsync(sourceFile, destinationDir, cancellationToken: cts.Token);
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
