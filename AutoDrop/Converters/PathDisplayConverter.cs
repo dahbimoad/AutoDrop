@@ -66,3 +66,35 @@ public sealed class PathFolderNameConverter : IValueConverter
         throw new NotImplementedException();
     }
 }
+
+/// <summary>
+/// Extracts the parent folder name from a file's full path.
+/// Example: C:\Users\Dahbi\Downloads\file.txt → Downloads
+/// </summary>
+public sealed class PathToParentFolderConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is not string path || string.IsNullOrEmpty(path))
+            return string.Empty;
+
+        try
+        {
+            var directoryPath = Path.GetDirectoryName(path);
+            if (string.IsNullOrEmpty(directoryPath))
+                return string.Empty;
+
+            // Get just the folder name (last segment)
+            return Path.GetFileName(directoryPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        }
+        catch
+        {
+            return path;
+        }
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
