@@ -275,7 +275,7 @@ The following technical improvements were implemented to ensure production readi
 | ID | Feature | Priority | Status |
 |----|---------|----------|--------|
 | US-08 | Auto-Move with Rules | 🔴 Critical | ✅ Done |
-| US-09 | Enhanced Undo History | 🔴 Critical | ⏳ Basic (single undo works) |
+| US-09 | Enhanced Undo History | 🔴 Critical | ✅ Done |
 | US-10 | Smart Auto-Rename | 🔴 Critical | ✅ Done |
 | US-11 | Duplicate Detection & Handling | 🟡 High | ⏳ Not started |
 
@@ -340,44 +340,67 @@ As a user, when I drop a file with an existing rule, I want it to move automatic
 
 ---
 
-### US-09: Enhanced Undo History ⭐
+### US-09: Enhanced Undo History ⭐ ✅ COMPLETE
 
 **Story:**  
-As a user, I want to see a history of my last 20 operations and undo multiple moves at once, so I can recover from mistakes easily.
+As a user, I want to see a history of my last 100 operations and undo multiple moves at once, so I can recover from mistakes easily.
+
+**Tagline:** "Every move is reversible. Zero risk."
 
 **Acceptance Criteria:**
-- [ ] Track last 20 operations in memory
-- [ ] Right-click tray icon → "Show History"
-- [ ] History window shows:
-  - Timestamp
-  - File name
-  - Source → Destination
-  - Status (Success/Failed/Undone)
-- [ ] Click any operation → [Undo] button appears
-- [ ] Support bulk undo: Select multiple → "Undo Selected"
-- [ ] Operations persist across app restarts (save to `history.json`)
-- [ ] Clear history option
+- [x] Track last 100 operations in memory
+- [x] Access via tray icon menu → "Show History" or from Rules Manager
+- [x] History window shows:
+  - Status indicator (Success/Failed/Undone with color coding)
+  - File name with icon (file/folder)
+  - Operation type (Move/Copy/Rename)
+  - Source → Destination folder names
+  - AI confidence score (when applicable)
+  - Timestamp (relative: "3m ago", "1h ago")
+  - Actions (Undo, Open folder)
+- [x] Click Undo button on any operation → reverses the move
+- [x] Support bulk undo: Select multiple → "Undo Selected"
+- [x] Operations persist across app restarts (save to `history.json`)
+- [x] Clear history option with confirmation
+- [x] Search/filter by filename or path
+- [x] Filter by status (All, Success, Failed, Undone)
+- [x] Visual distinction for undone rows (grayed out, 50% opacity)
+- [x] Undo button disables after operation is undone (INotifyPropertyChanged)
+- [x] Stats display: Total operations, Undoable count
+
+**Implementation Details:**
+- Model: `OperationHistoryItem` with `INotifyPropertyChanged` for reactive UI
+- Service: `IHistoryService` / `HistoryService` with JSON persistence
+- ViewModel: `HistoryViewModel` with filtering, search, multi-select
+- View: `HistoryWindow.xaml` with WPF-UI Fluent Design
+- DataGrid with custom row styles for selection and undone state
 
 **Data Structure:**
 ```json
 {
-  "history": [
+  "version": 1,
+  "maxItems": 100,
+  "items": [
     {
-      "id": "uuid-here",
+      "id": "guid",
+      "sourcePath": "C:\\Users\\Me\\Downloads\\report.pdf",
+      "destinationPath": "C:\\Users\\Me\\Documents\\report.pdf",
+      "itemName": "report.pdf",
+      "isDirectory": false,
+      "sizeBytes": 1024000,
+      "operationType": "Move",
+      "status": "Success",
       "timestamp": "2026-01-03T15:45:30Z",
-      "fileName": "report.pdf",
-      "source": "C:\\Users\\Me\\Downloads\\report.pdf",
-      "destination": "C:\\Users\\Me\\Documents\\report.pdf",
-      "operation": "move",
-      "status": "success",
-      "undone": false
+      "undoneAt": null,
+      "aiConfidence": 0.92,
+      "errorMessage": null
     }
   ]
 }
 ```
 
 **Priority:** 🔴 Critical - Safety feature  
-**Estimated Effort:** 3 days
+**Status:** ✅ Complete
 
 ---
 
@@ -736,7 +759,7 @@ As an end user, I want a professional installer that makes setup easy and instal
 - [x] Testing & bug fixes (1 day) ✅
 
 **Week 4:**
-- [ ] US-09: Enhanced Undo History (3 days)
+- [x] US-09: Enhanced Undo History (3 days) ✅
 - [ ] US-11: Duplicate Detection (2 days)
 
 **Deliverable:** v1.1 - "AutoDrop Pro"
@@ -885,11 +908,11 @@ public class OperationHistory
 ## 14. Priority Matrix
 
 **Must Have (Critical Path to v2.0):**
-1. US-08: Auto-Move with Rules ⭐
-2. US-09: Enhanced Undo History ⭐
-3. US-10: Smart Auto-Rename ⭐
-4. US-12: Rules Management UI ⭐
-5. US-17: Professional Installer ⭐
+1. US-08: Auto-Move with Rules ⭐ ✅
+2. US-09: Enhanced Undo History ⭐ ✅
+3. US-10: Smart Auto-Rename ⭐ ✅
+4. US-12: Rules Management UI ⭐ ✅
+5. US-17: Professional Installer ⭐ ✅
 
 **Should Have (Competitive Advantages):**
 6. US-13: Batch Operations
