@@ -13,6 +13,7 @@
     <converters:ConfidenceLevelConverter x:Key="ConfidenceLevelConverter"/>
     <converters:PathParentConverter x:Key="PathParentConverter"/>
     <converters:PathFolderNameConverter x:Key="PathFolderNameConverter"/>
+    <converters:PathToParentFolderConverter x:Key="PathToParentFolderConverter"/>
     <converters:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibilityConverter"/>
 
     <!-- Drop Zone Styles -->
