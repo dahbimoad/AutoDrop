@@ -133,24 +133,24 @@ jobs:
           body: |
             ## AutoDrop ${{ steps.version.outputs.VERSION }}
             
-            ### 🎯 Downloads
+            ### Downloads
             | Platform | Installer (Recommended) | Portable |
             |----------|------------------------|----------|
             | **Windows x64** | `*-win-x64-setup.exe` | `*-win-x64-portable.zip` |
-            | **Windows ARM64** | — | `*-win-arm64-portable.zip` |
+            | **Windows ARM64** | - | `*-win-arm64-portable.zip` |
             
-            ### 📦 Installer Features
-            - ✅ Modern Windows 11 style UI
-            - ✅ Desktop shortcut & Start menu entry
-            - ✅ Proper uninstaller (Add/Remove Programs)
-            - ✅ Per-user install (no admin required)
+            ### Installer Features
+            - Modern Windows 11 style UI
+            - Desktop shortcut and Start menu entry
+            - Proper uninstaller (Add/Remove Programs)
+            - Per-user install (no admin required)
             
-            ### 📁 Portable Version
+            ### Portable Version
             - Extract ZIP and run `AutoDrop.exe`
             - No installation required
             - Settings stored in `%AppData%\AutoDrop`
             
-            ### ✅ SHA256 Checksums
+            ### SHA256 Checksums
             See `checksums.txt` for file verification.
           files: |
             ./AutoDrop-${{ steps.version.outputs.VERSION }}-win-x64-setup.exe
